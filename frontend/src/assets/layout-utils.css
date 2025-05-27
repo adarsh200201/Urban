@@ -1,0 +1,88 @@
+/* Layout Utility Styles 
+   These styles ensure consistent spacing and layout across the application */
+
+/* Page container with proper header spacing */
+.page-container {
+  padding-top: 4.5rem; /* Ensure content starts below fixed header */
+  min-height: calc(100vh - 4.5rem); /* Subtract header height for proper min-height */
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Grid layouts */
+.grid-responsive {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+/* Spacing utilities */
+.section-spacing {
+  margin-bottom: 2rem;
+}
+
+.content-spacing {
+  padding: 1.5rem;
+}
+
+/* Form consistency */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+/* Consistent card styles */
+.card-hover {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Consistent button styles */
+.btn-animated {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.btn-animated:hover {
+  transform: translateY(-2px);
+}
+
+/* Fix for mobile responsive issues */
+@media (max-width: 768px) {
+  .page-container {
+    padding-top: 4rem;
+  }
+  
+  .content-spacing {
+    padding: 1rem;
+  }
+  
+  .responsive-stack {
+    flex-direction: column !important;
+  }
+  
+  .responsive-full-width {
+    width: 100% !important;
+  }
+}
+
+/* Fix overflow issues */
+.overflow-fix {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Ensure fixed elements don't create overflow */
+.fixed-element-container {
+  position: relative;
+  z-index: 10;
+}
+
+/* Consistent form input heights */
+.input-height-consistent {
+  height: 2.75rem;
+}

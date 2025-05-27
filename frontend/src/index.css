@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+@layer components {
+  /* Container & Layout */
+  .container {
+    @apply px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl;
+  }
+  
+  /* Button Styles */
+  .btn {
+    @apply px-4 py-2 md:px-6 md:py-3 font-medium transition-colors rounded-lg text-base md:text-lg;
+  }
+  
+  .btn-primary {
+    @apply text-white bg-primary hover:bg-amber-600 transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply text-white bg-secondary hover:bg-slate-800 transition-colors duration-200;
+  }
+  
+  .btn-animated {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-md;
+  }
+  
+  /* Form Elements */
+  .form-input {
+    @apply w-full px-3 py-2 md:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base;
+  }
+
+  .form-select {
+    @apply w-full px-3 py-2 md:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base;
+  }
+
+  .form-label {
+    @apply block text-gray-700 text-sm font-bold mb-2;
+  }
+
+  .form-container {
+    @apply bg-white rounded-lg shadow-md p-4 sm:p-6 md:p-8 lg:p-10 w-full md:w-3/4 lg:w-2/3 xl:w-1/2 mx-auto;
+  }
+
+  /* Card Styles */
+  .card {
+    @apply overflow-hidden bg-white rounded-lg shadow-md h-full flex flex-col;
+  }
+  
+  .card-body {
+    @apply p-4 md:p-6 lg:p-8 flex-grow;
+  }
+  
+  .card-footer {
+    @apply p-4 md:p-6 border-t border-gray-200 mt-auto;
+  }
+  
+  /* Typography */
+  .heading-1 {
+    @apply text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6;
+  }
+  
+  .heading-2 {
+    @apply text-xl md:text-2xl lg:text-3xl font-bold mb-3 md:mb-4;
+  }
+  
+  .heading-3 {
+    @apply text-lg md:text-xl lg:text-2xl font-semibold mb-2 md:mb-3;
+  }
+  
+  .body-text {
+    @apply text-base lg:text-lg text-gray-700;
+  }
+  
+  /* Layout utilities */
+  .page-container {
+    @apply pt-16 sm:pt-20 md:pt-24 lg:pt-24 w-full overflow-x-hidden;
+  }
+  
+  .section-spacing {
+    @apply mb-8 md:mb-12 lg:mb-16;
+  }
+  
+  .content-padding {
+    @apply p-4 sm:p-6 md:p-8 lg:p-10;
+  }
+  
+  .responsive-grid {
+    @apply grid gap-4 sm:gap-6 lg:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+  
+  /* Spacing utilities */
+  .desktop-section-margin {
+    @apply my-8 md:my-12 lg:my-16;
+  }
+  
+  .standard-spacing {
+    @apply p-4 md:p-6 lg:p-8;
+  }
+
+  /* Table Styles */
+  .table-container {
+    @apply overflow-x-auto shadow-md rounded-lg;
+  }
+  
+  .table-standard {
+    @apply min-w-full bg-white divide-y divide-gray-200;
+  }
+  
+  .table-header {
+    @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+  }
+  
+  .table-cell {
+    @apply px-6 py-4 whitespace-nowrap;
+  }
+}
