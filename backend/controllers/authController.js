@@ -9,10 +9,24 @@ const crypto = require('crypto');
 // @access  Public
 exports.register = async (req, res) => {
   try {
+    console.log('Register endpoint hit with data:', { ...req.body, password: '******' });
+    
     const { name, email, password, phone } = req.body;
 
     // Check if user exists
-    let user = await User.findOne({ email });
+    let user;
+    try {
+      user = await User.findOne({ email });
+      console.log('User lookup result:', user ? 'User exists' : 'User does not exist');
+    } catch (dbError) {
+      console.error('Database error during user lookup:', dbError);
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection error',
+        error: dbError.message
+      });
+    }
+    
     if (user) {
       return res.status(400).json({
         success: false,
@@ -21,19 +35,32 @@ exports.register = async (req, res) => {
     }
 
     // Create new user
-    user = await User.create({
-      name,
-      email,
-      password,
-      phone
-    });
+    try {
+      user = await User.create({
+        name,
+        email,
+        password,
+        phone
+      });
+      console.log('User created successfully with ID:', user._id);
+    } catch (createError) {
+      console.error('Error creating user:', createError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create user',
+        error: createError.message,
+        details: createError.errors || {}
+      });
+    }
 
     sendTokenResponse(user, 201, res);
   } catch (error) {
+    console.error('Unhandled error in registration:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
