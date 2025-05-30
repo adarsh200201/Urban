@@ -299,29 +299,57 @@ exports.resetPassword = async (req, res) => {
 
 // Helper function to get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
-  // Create token
-  const token = user.getSignedJwtToken();
-
-  const options = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000
-    ),
-    httpOnly: true
-  };
-
-  if (process.env.NODE_ENV === 'production') {
-    options.secure = true;
-  }
-
-  res.status(statusCode).cookie('token', token, options).json({
-    success: true,
-    token,
-    user: {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role
+  try {
+    console.log('Generating token for user:', user._id);
+    
+    // Create token
+    let token;
+    try {
+      token = user.getSignedJwtToken();
+      console.log('Token generated successfully');
+    } catch (tokenError) {
+      console.error('Error generating token:', tokenError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to generate authentication token',
+        error: tokenError.message
+      });
     }
-  });
+
+    // Configure cookie options
+    const cookieExpire = process.env.JWT_COOKIE_EXPIRE || '30';
+    console.log(`Setting cookie to expire in ${cookieExpire} days`);
+    
+    const options = {
+      expires: new Date(
+        Date.now() + parseInt(cookieExpire) * 24 * 60 * 60 * 1000
+      ),
+      httpOnly: true
+    };
+
+    if (process.env.NODE_ENV === 'production') {
+      options.secure = true;
+    }
+
+    // Send the response
+    res.status(statusCode).cookie('token', token, options).json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role
+      }
+    });
+    console.log('Response sent successfully');
+  } catch (error) {
+    console.error('Unhandled error in sendTokenResponse:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during authentication',
+      error: error.message
+    });
+  }
 };
