@@ -1,7 +1,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/driver';
+// Import base API URL or use environment variable
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = `${BASE_URL}/driver`;
 
 // Get driver profile
 export const getDriverProfile = createAsyncThunk(
@@ -135,7 +137,7 @@ export const startTrip = createAsyncThunk(
       
       // Using the special trip management endpoint to avoid middleware conflicts
       const response = await axios.put(
-        `http://localhost:5000/api/trip-management/start`,
+        `${BASE_URL}/trip-management/start`,
         { driverId, bookingId },
         config
       );
@@ -164,7 +166,7 @@ export const completeTrip = createAsyncThunk(
       
       // Using the special trip management endpoint to avoid middleware conflicts
       const response = await axios.put(
-        `http://localhost:5000/api/trip-management/complete`,
+        `${BASE_URL}/trip-management/complete`,
         { driverId, bookingId },
         config
       );

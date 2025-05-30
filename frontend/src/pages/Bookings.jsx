@@ -14,7 +14,8 @@ const Bookings = () => {
   const { user } = useSelector(state => state.auth);
   
   useEffect(() => {
-    const API_URL = 'http://localhost:5000/api';
+    // Import API URL from config
+    const { API_URL } = require('../config/apiConfig');
     
     // Get bookings from MongoDB database only using API
     const fetchBookings = async () => {

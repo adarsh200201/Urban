@@ -8,8 +8,9 @@ import socketService from '../../utils/socketService';
 const Bookings = () => {
   const [bookings, setBookings] = useState([]);
   const [drivers, setDrivers] = useState([]);
-  const API_URL = 'http://localhost:5000/api';
-  const DRIVER_API_URL = 'http://localhost:5000/api/driver';
+  // Import API URL from config
+  const { API_URL } = require('../../config/apiConfig');
+  const DRIVER_API_URL = `${API_URL}/driver`;
   const { user } = useSelector(state => state.auth || {});
   const [totalBookings, setTotalBookings] = useState(0);
   const [page, setPage] = useState(1);

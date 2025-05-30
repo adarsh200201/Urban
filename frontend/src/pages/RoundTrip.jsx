@@ -13,7 +13,8 @@ const RoundTrip = () => {
   const [cities, setCities] = useState([]);
 
   // API URLs
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../config/apiConfig');
 
   // Get current date in YYYY-MM-DD format
   const getCurrentDate = () => {

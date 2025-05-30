@@ -24,7 +24,8 @@ const FixedRouteManagement = () => {
   });
 
   // API URL
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../../config/apiConfig');
 
   // Fetch all fixed routes, cities, and cab types on component mount
   useEffect(() => {

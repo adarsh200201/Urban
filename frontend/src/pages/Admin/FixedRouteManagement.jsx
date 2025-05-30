@@ -24,7 +24,8 @@ const FixedRouteManagement = () => {
   });
 
   // API URL
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../../config/apiConfig');
   
   // Mock token for development (replace with actual auth token in production)
   const mockToken = localStorage.getItem('adminToken') || 'mock-admin-token';

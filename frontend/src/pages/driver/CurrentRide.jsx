@@ -22,7 +22,8 @@ const CurrentRide = () => {
   const [realTimeStatus, setRealTimeStatus] = useState('');
   
   // API URL for backend calls
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../../config/apiConfig');
 
   // Initialize socket connection - only once when component mounts
   useEffect(() => {

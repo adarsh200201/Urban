@@ -21,7 +21,8 @@ const BookingConfirmation = () => {
   const [booking, setBooking] = useState(null);
   
   // API URL
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../config/apiConfig');
   const [emailSent, setEmailSent] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   

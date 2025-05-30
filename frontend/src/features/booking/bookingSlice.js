@@ -1,7 +1,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/booking';
+// Import base API URL or use environment variable
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = `${BASE_URL}/booking`;
 
 const initialState = {
   bookings: [],

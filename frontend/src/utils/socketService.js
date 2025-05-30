@@ -1,6 +1,7 @@
 import io from 'socket.io-client';
 
-const SOCKET_URL = 'http://localhost:5000';
+// Use environment variable for socket URL in production, fallback to localhost for development
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
 
 // List of all available socket events - centralized for consistency
 const EVENTS = {

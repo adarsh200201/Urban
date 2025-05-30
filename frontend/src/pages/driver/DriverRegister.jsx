@@ -59,7 +59,9 @@ const DriverRegister = () => {
       setLoadingCabTypes(true);
       try {
         // Try the new cabtype endpoint first
-        const response = await axios.get('http://localhost:5000/api/cabtype/all');
+        // Use environment variable for API URL
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const response = await axios.get(`${API_URL}/cabtype/all`);
         if (response.data && response.data.data) {
           // Filter only active cab types
           const activeCabTypes = response.data.data.filter(cabType => cabType.active);
@@ -70,7 +72,9 @@ const DriverRegister = () => {
         console.error('Error fetching from cabtype/all:', error);
         // Fallback to the old endpoint if new one fails
         try {
-          const fallbackResponse = await axios.get('http://localhost:5000/api/cab');
+          // Use environment variable for API URL
+          const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+          const fallbackResponse = await axios.get(`${API_URL}/cab`);
           if (fallbackResponse.data && fallbackResponse.data.data) {
             setCabTypes(fallbackResponse.data.data);
             console.log('Fetched cab types from fallback endpoint:', fallbackResponse.data.data);

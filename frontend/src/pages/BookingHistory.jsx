@@ -12,7 +12,8 @@ const BookingHistory = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../config/apiConfig');
   
   useEffect(() => {
     const fetchBookings = async () => {

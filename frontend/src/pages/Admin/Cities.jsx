@@ -6,7 +6,8 @@ import { FaPlus, FaEdit, FaToggleOn, FaToggleOff, FaSearch } from 'react-icons/f
 const Cities = () => {
   const [cities, setCities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../../config/apiConfig');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);

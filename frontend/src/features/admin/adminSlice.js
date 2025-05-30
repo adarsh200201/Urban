@@ -1,11 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/admin';
-const CAB_API_URL = 'http://localhost:5000/api/cab';
-// Use the correct driver API endpoint
-const DRIVER_API_URL = 'http://localhost:5000/api/driver';
-const BOOKING_API_URL = 'http://localhost:5000/api/booking';
+// Import base API URL or use environment variable
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = `${BASE_URL}/admin`;
+const CAB_API_URL = `${BASE_URL}/cab`;
+const DRIVER_API_URL = `${BASE_URL}/driver`;
+const BOOKING_API_URL = `${BASE_URL}/booking`;
 
 const initialState = {
   dashboardStats: null,

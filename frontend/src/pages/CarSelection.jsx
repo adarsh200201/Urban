@@ -27,8 +27,8 @@ const CarSelection = () => {
   const journeyType = queryParams.get('journeyType') || 'outstation';
   const tripType = queryParams.get('tripType') || 'oneWay';
   
-  // API URL
-  const API_URL = 'http://localhost:5000/api';
+  // API URL - use environment variable or fallback to local development
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   
   // Function to calculate distance between locations
   const calculateDistance = async (fromLocation, toLocation) => {

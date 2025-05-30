@@ -243,7 +243,7 @@ const Cabs = () => {
       if (currentCab) {
         // Update existing cab
         response = await axios.put(
-          `http://localhost:5000/api/cab/${currentCab._id}`,
+          `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/cab/${currentCab._id}`,
           cabData,
           config
         );
@@ -251,7 +251,7 @@ const Cabs = () => {
       } else {
         // Create new cab
         response = await axios.post(
-          'http://localhost:5000/api/cab/noimage',
+          `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/cab/noimage`,
           cabData,
           config
         );
@@ -288,7 +288,7 @@ const Cabs = () => {
           
           // Upload the image using the direct endpoint
           const imageResponse = await axios.post(
-            `http://localhost:5000/api/direct-cab-image/${cabId}`,
+            `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/direct-cab-image/${cabId}`,
             imageFormData,
             imageConfig
           );
@@ -318,7 +318,7 @@ const Cabs = () => {
             // Update the cab to let the user know it was created but image failed
             try {
               await axios.put(
-                `http://localhost:5000/api/cab/${cabId}`,
+                `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/cab/${cabId}`,
                 { ...cabData, note: 'Image upload failed - please try again' },
                 config
               );

@@ -1,7 +1,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/driver/auth';
+// Import base API URL or use environment variable
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = `${BASE_URL}/driver/auth`;
 
 // No longer getting driver from localStorage
 const initialState = {
@@ -67,8 +69,8 @@ export const registerDriver = createAsyncThunk(
         uploadFormData.append('vehicleType', vehicleType);
         uploadFormData.append('documents', documents);
         
-        console.log('Making POST request with documents to: http://localhost:5000/api/driver/auth/register');
-        const response = await axios.post('http://localhost:5000/api/driver/auth/register', uploadFormData, {
+        console.log(`Making POST request with documents to: ${API_URL}/register`);
+        const response = await axios.post(`${API_URL}/register`, uploadFormData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
@@ -98,8 +100,8 @@ export const registerDriver = createAsyncThunk(
         console.log('Simplified registration data:', simplifiedData);
         
         // Use JSON data format for registration without documents
-        console.log('Making POST request to: http://localhost:5000/api/driver/auth/direct-register');
-        const response = await axios.post('http://localhost:5000/api/driver/auth/direct-register', simplifiedData, {
+        console.log(`Making POST request to: ${API_URL}/direct-register`);
+        const response = await axios.post(`${API_URL}/direct-register`, simplifiedData, {
           headers: {
             'Content-Type': 'application/json'
           }

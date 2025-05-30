@@ -38,7 +38,8 @@ const Profile = () => {
   });
 
   // API URL
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../config/apiConfig');
 
   // Load user data and fetch bookings when component mounts
   useEffect(() => {

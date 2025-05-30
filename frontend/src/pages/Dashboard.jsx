@@ -11,7 +11,8 @@ const Dashboard = () => {
   const [upcomingTrips, setUpcomingTrips] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
   const { user } = useSelector(state => state.auth || {});
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../config/apiConfig');
   
   useEffect(() => {
     const fetchDashboardData = async () => {

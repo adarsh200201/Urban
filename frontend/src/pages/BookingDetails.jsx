@@ -40,7 +40,8 @@ const BookingDetails = () => {
   const { user: userInfo } = useSelector((state) => state.auth);
   
   // API URL
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../config/apiConfig');
   
   // Initialize socket connection for real-time updates
   useEffect(() => {

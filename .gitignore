@@ -37,3 +37,6 @@ yarn-error.log*
 .vscode
 *.swp
 *.swo
+
+# Local Netlify folder
+.netlify

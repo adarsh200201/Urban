@@ -14,7 +14,8 @@ const LocationInput = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const wrapperRef = useRef(null);
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../config/apiConfig');
 
   // Fetch city suggestions from the API
   useEffect(() => {
