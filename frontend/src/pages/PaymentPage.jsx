@@ -20,7 +20,8 @@ const PaymentPage = () => {
   const queryParams = new URLSearchParams(location.search);
   
   // API URL
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../config/apiConfig');
   
   // Get auth state directly from Redux and localStorage for complete coverage
   const authState = useSelector(state => state.auth || {});
@@ -324,7 +325,8 @@ const PaymentPage = () => {
       const tempBookingId = 'CB' + Date.now().toString().substring(5);
       
       // Setup API config
-      const API_URL = 'http://localhost:5000/api';
+      // Import API URL from config
+  const { API_URL } = require('../config/apiConfig');
       let config = {
         headers: {
           'Content-Type': 'application/json'

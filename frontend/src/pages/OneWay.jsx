@@ -15,7 +15,8 @@ const OneWay = () => {
   const [cities, setCities] = useState([]);
 
   // API URLs - Updated to use port 5000
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../config/apiConfig');
 
   // Get current date in DD-MMM-YYYY format
   const getCurrentDate = () => {

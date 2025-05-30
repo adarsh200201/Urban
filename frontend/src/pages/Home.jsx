@@ -37,7 +37,8 @@ const Home = () => {
   // API data
   const [popularCities, setPopularCities] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const API_URL = 'http://localhost:5000/api';
+  // Import API URL from config
+  const { API_URL } = require('../config/apiConfig');
   
   // Fetch data from backend
   useEffect(() => {

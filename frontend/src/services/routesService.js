@@ -1,7 +1,6 @@
 import axios from 'axios';
+import { API_URL } from '../config/apiConfig';
 
-// API URL
-const API_URL = 'http://localhost:5000/api';
 
 /**
  * Check if a fixed route exists between two cities
