@@ -55,7 +55,7 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Middleware - IMPORTANT: Set up middleware BEFORE defining routes
 app.use(cors({
-  origin: 'http://localhost:3000',  // Your frontend domain
+  origin: ['http://localhost:3000', 'https://urban-ride.netlify.app', process.env.FRONTEND_URL || '*'],  // Your frontend domains
   credentials: true,  // Allow credentials (cookies, authorization headers)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -337,6 +337,17 @@ app.post('/api/driver/direct-register', async (req, res) => {
   }
 });
 
+
+// Root path handler
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Welcome to Urban Ride API',
+    status: 'online',
+    version: '1.0.0',
+    documentation: 'API endpoints are available under /api/*',
+    healthCheck: '/api-test'
+  });
+});
 
 // Add direct debug route to test basic API functionality
 app.get('/api-test', (req, res) => {
