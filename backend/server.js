@@ -55,7 +55,7 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Middleware - IMPORTANT: Set up middleware BEFORE defining routes
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://urban-ride.netlify.app', process.env.FRONTEND_URL || '*'],  // Your frontend domains
+  origin: ['http://localhost:3000', 'https://urban-ride.netlify.app', 'https://urban-ride-live.netlify.app', 'https://remarkable-unicorn-17d6f0.netlify.app', 'https://lucky-kitten-1eae91.netlify.app', 'https://fanciful-starburst-664a20.netlify.app', process.env.FRONTEND_URL || '*'],  // Your frontend domains
   credentials: true,  // Allow credentials (cookies, authorization headers)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
