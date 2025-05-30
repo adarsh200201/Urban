@@ -1,7 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/auth';
+// Use environment variable for API URL in production, fallback to localhost for development
+const API_URL = `${process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace(/\/api$/, '') : 'http://localhost:5000'}/api/auth`;
 
 // Get user from localStorage
 const user = JSON.parse(localStorage.getItem('user'));

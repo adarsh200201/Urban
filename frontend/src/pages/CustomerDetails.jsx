@@ -30,8 +30,8 @@ const CustomerDetails = () => {
   const travelDate = queryParams.get('travelDate');
   const travelTime = queryParams.get('travelTime');
   
-  // API URL
-  const API_URL = 'http://localhost:5000/api';
+  // API URL - use environment variable or fallback to local development
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
   // Auto-fill mobile from the booking form if available
   useEffect(() => {
