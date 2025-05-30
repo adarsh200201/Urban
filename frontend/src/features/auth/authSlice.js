@@ -28,13 +28,29 @@ export const register = createAsyncThunk(
       
       return response.data;
     } catch (error) {
-      const message = 
-        (error.response && 
-          error.response.data && 
-          error.response.data.message) ||
-        error.message ||
-        error.toString();
-        
+      // Improved error message extraction
+      let message;
+      
+      if (error.response && error.response.data) {
+        // If API returns a message property
+        if (error.response.data.message) {
+          message = error.response.data.message;
+        } 
+        // Some APIs might return the error directly in the data
+        else if (typeof error.response.data === 'string') {
+          message = error.response.data;
+        }
+        // Or the error might be in an 'error' property
+        else if (error.response.data.error) {
+          message = error.response.data.error;
+        }
+      }
+      
+      // Fallback to default error handling if we couldn't extract a message
+      if (!message) {
+        message = error.message || 'An error occurred during registration';
+      }
+      
       return thunkAPI.rejectWithValue(message);
     }
   }

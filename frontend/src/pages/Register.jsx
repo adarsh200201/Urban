@@ -25,7 +25,18 @@ const Register = () => {
   
   useEffect(() => {
     if (isError) {
-      toast.error(message);
+      // Check for email already exists error
+      if (message.includes('email already exists')) {
+        toast.error(
+          <div>
+            This email is already registered. Please use a different email or 
+            <Link to="/login" className="font-bold underline">login here</Link>.
+          </div>, 
+          { autoClose: 8000 }
+        );
+      } else {
+        toast.error(message);
+      }
     }
     
     // Redirect when logged in
