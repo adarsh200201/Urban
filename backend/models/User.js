@@ -58,10 +58,14 @@ userSchema.methods.matchPassword = async function(enteredPassword) {
 
 // Generate JWT token
 userSchema.methods.getSignedJwtToken = function() {
+  // Default to '30d' if JWT_EXPIRE isn't set or is invalid
+  const expiresIn = process.env.JWT_EXPIRE || '30d';
+  console.log(`Setting JWT to expire in: ${expiresIn}`);
+  
   return jwt.sign(
     { id: this._id, role: this.role },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRE }
+    { expiresIn: expiresIn }
   );
 };
 
