@@ -315,6 +315,36 @@ const CarSelection = () => {
       let cabs = response.data.data;
       console.log(`Found ${cabs.length} cabs from backend in ${fromCity}`);
       
+      // CRITICAL FIX: Adjust any unrealistically low baseKmPrice values
+      // Some cabs in database may have baseKmPrice as absolute values (10, 14) instead of per-km rates
+      cabs = cabs.map(cab => {
+        // If baseKmPrice is unrealistically low for a per-km rate (< 5 rupees per km)
+        // interpret as a base price and convert to a more realistic per-km rate
+        if ((cab.baseKmPrice < 5 || cab.baseKmPrice === 10 || cab.baseKmPrice === 14) && distance > 50) {
+          const adjustedCab = {...cab};
+          // Store original price for reference
+          adjustedCab.originalBasePrice = cab.baseKmPrice;
+          
+          // Set to a more realistic per-km rate (based on cab category)
+          if (cab.category?.toLowerCase().includes('luxury')) {
+            adjustedCab.baseKmPrice = 18; // Luxury cab rate
+          } else if (cab.category?.toLowerCase().includes('suv')) {
+            adjustedCab.baseKmPrice = 15; // SUV rate
+          } else {
+            adjustedCab.baseKmPrice = 12; // Standard sedan rate
+          }
+          
+          // Also ensure there's some extraFarePerKm if it's missing
+          if (!adjustedCab.extraFarePerKm || adjustedCab.extraFarePerKm < 1) {
+            adjustedCab.extraFarePerKm = adjustedCab.baseKmPrice * 1.2;
+          }
+          
+          console.log(`Adjusted cab ${cab.name} baseKmPrice from ${cab.baseKmPrice} to ${adjustedCab.baseKmPrice} rupees/km`);
+          return adjustedCab;
+        }
+        return cab;
+      });
+      
       // Handle no cabs found situation
       if (cabs.length === 0) {
         setError(`No cabs are currently available in ${fromCity}. Please try again later.`);
