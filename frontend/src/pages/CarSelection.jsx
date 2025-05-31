@@ -158,6 +158,34 @@ const CarSelection = () => {
     return calculateCabPrice(cab, dist);
   };
 
+  // Helper function to get cab price with dynamic rate calculation based on cab type
+  const calculateDynamicPrice = (cab) => {
+    // For long journeys, calculate a realistic price based on cab type and distance
+    if (distance > 500) {
+      let ratePerKm;
+      
+      // Set different rates based on cab type or name
+      if (cab.name.toLowerCase().includes('tiago')) {
+        ratePerKm = 12;
+      } else if (cab.name.toLowerCase().includes('dsada')) {
+        ratePerKm = 14;
+      } else if (cab.name.toLowerCase().includes('adarsh')) {
+        ratePerKm = 10;
+      } else if (cab.category?.toLowerCase().includes('luxury')) {
+        ratePerKm = 18;
+      } else if (cab.category?.toLowerCase().includes('suv')) {
+        ratePerKm = 15;
+      } else {
+        ratePerKm = 10; // Default rate
+      }
+      
+      return Math.round(distance * ratePerKm);
+    }
+    
+    // Otherwise use standard calculation
+    return calculateCabPrice(cab, distance);
+  };
+
   // Function to process fixed route cabs
   const processFixedRouteCabs = (fixedRoutes) => {
     const fixedCabs = fixedRoutes.map(route => {
@@ -200,29 +228,12 @@ const CarSelection = () => {
   // Note: We're using a simplified pricing model: price = distance * rate
   // No additional fees or calculations are needed
 
-  // Helper function to get cab price - uses cached price if available, otherwise calculates dynamically
-  // CRITICAL FIX: Enforce realistic pricing for long distance journeys
+  // Helper function to get cab price - uses the dynamic price calculation
   const getCabPrice = (cab) => {
     if (cab.isFixedRoute) return cab.price;
     
-    // For long-distance journeys like Rajkot-Delhi (1140 km), ensure prices are realistic
-    if (distance > 500) {
-      // Apply direct pricing override for long journeys
-      let perKmRate;
-      if (cab.category?.toLowerCase().includes('luxury')) {
-        perKmRate = 18; // Luxury cab rate
-      } else if (cab.category?.toLowerCase().includes('suv')) {
-        perKmRate = 15; // SUV rate
-      } else {
-        perKmRate = 12; // Standard sedan rate
-      }
-      
-      // Calculate and return a realistic price based on distance and cab type
-      return Math.round(distance * perKmRate);
-    }
-    
-    // For normal journeys, use the cached price or calculate dynamically
-    return cabPrices[cab._id] ? cabPrices[cab._id] : calculateCabPrice(cab, distance);
+    // Use the dedicated dynamic pricing function
+    return calculateDynamicPrice(cab);
   };
   
   // Shared handler for booking button clicks
@@ -629,17 +640,34 @@ const CarSelection = () => {
                       <FaSuitcase className="ml-2 mr-1" />
                       <span>{cab.luggageCapacity} Bags</span>
                     </div>
+                    <div className="text-sm text-gray-500 mt-1">{cab.category || 'Sedan'}</div>
                   </div>
                 </div>
                 <p className="text-gray-600 text-sm mb-3">{cab.description}</p>
-                <div className="flex justify-between items-center text-sm">
-                  <div className="text-gray-600">
-                    <span className="font-medium">Distance:</span> {distance || 0} km
+                
+                {/* Journey Details */}
+                <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                  <div className="flex justify-between items-center text-sm mb-2">
+                    <div className="text-gray-600">
+                      <span className="font-medium">Journey Distance:</span> {distance || 0} km
+                    </div>
+                    <div className="text-gray-600">
+                      <span className="font-medium">Extra Fare:</span> ₹{cab.extraFarePerKm || 0}/km
+                    </div>
                   </div>
-                  <div className="text-gray-600">
-                    <span className="font-medium">Rate:</span> ₹{cab.extraFarePerKm || 0}/km
+                  <div className="flex justify-between items-center text-sm">
+                    {/* Only show Included km if not 0 */}
+                    {(cab.includedKm > 0) && (
+                      <div className="text-gray-600">
+                        <span className="font-medium">Included km:</span> {cab.includedKm} km
+                      </div>
+                    )}
+                    <div className="text-green-600">
+                      <span className="font-medium">Fuel & Driver:</span> Included
+                    </div>
                   </div>
                 </div>
+                
                 <div className="flex justify-between items-center mt-3">
                   <div className="text-xl font-bold text-blue-600 flex items-center">
                     <FaRupeeSign className="text-sm" />
@@ -665,16 +693,42 @@ const CarSelection = () => {
                   />
                 </div>
                 
+                {/* Cab Info */}
+                <div className="text-center mb-3">
+                  <h2 className="font-bold text-xl">{cab.name}</h2>
+                  <p className="text-gray-600 text-sm mt-1">{cab.category || 'Sedan'}</p>
+                </div>
+                
                 {/* Price */}
                 <div className="text-center mb-4">
                   <div className="text-3xl font-bold text-blue-600 flex items-center justify-center">
                     <FaRupeeSign className="text-2xl" />
                     <span>{getCabPrice(cab)}</span>
                   </div>
+                  <p className="text-sm text-gray-500 mt-1">Total fare for {distance || 0} km journey</p>
                 </div>
                 
-                {/* Cab Type & Model */}
-                <div className="text-center mb-4">
+                {/* Journey Details */}
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <div className="flex justify-between items-center text-sm mb-2">
+                    <div className="text-gray-600 font-medium">Journey Distance:</div>
+                    <div className="font-semibold">{distance || 0} km</div>
+                  </div>
+                  <div className="flex justify-between items-center text-sm mb-2">
+                    <div className="text-gray-600 font-medium">Extra Fare per km:</div>
+                    <div className="font-semibold">₹{cab.extraFarePerKm || 0}</div>
+                  </div>
+                  {/* Only show Included km if not 0 */}
+                  {(cab.includedKm > 0) && (
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <div className="text-gray-600 font-medium">Included km:</div>
+                      <div className="font-semibold">{cab.includedKm} km</div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Cab Features */}
+                <div className="mb-4">
                   
                   {tripType === 'roundTrip' && (
                     <div>
@@ -700,20 +754,20 @@ const CarSelection = () => {
                     </div>
                   )}
                   <div className="flex justify-between mb-3">
-                    <div className="text-gray-600 font-medium">Fuel Charges</div>
-                    <div className="font-semibold">{cab.fuelChargesIncluded ? 'Included' : 'Extra'}</div>
+                    <div className="text-gray-600 font-medium">Fuel Charges:</div>
+                    <div className="font-semibold text-green-600">{cab.fuelChargesIncluded ? 'Included' : 'Extra'}</div>
                   </div>
                   
                   {/* Driver Charges */}
                   <div className="flex justify-between mb-3">
-                    <div className="text-gray-600 font-medium">Driver Charges</div>
-                    <div className="font-semibold">{cab.driverChargesIncluded ? 'Included' : 'Extra'}</div>
+                    <div className="text-gray-600 font-medium">Driver Charges:</div>
+                    <div className="font-semibold text-green-600">{cab.driverChargesIncluded ? 'Included' : 'Extra'}</div>
                   </div>
                   
                   {/* Night Charges */}
                   <div className="flex justify-between mb-4">
-                    <div className="text-gray-600 font-medium">Night Charges</div>
-                    <div className="font-semibold">{cab.nightChargesIncluded ? 'Included' : 'Extra'}</div>
+                    <div className="text-gray-600 font-medium">Night Charges:</div>
+                    <div className="font-semibold text-green-600">{cab.nightChargesIncluded ? 'Included' : 'Extra'}</div>
                   </div>
                 </div>
                 
@@ -771,7 +825,11 @@ const CarSelection = () => {
             <div className="flex items-center">
               <div className="mr-6">
                 <p className="text-gray-600">Total Fare</p>
-                <p className="text-2xl font-bold text-blue-600">₹{cabPrices[selectedCab._id] || selectedCab.baseKmPrice}</p>
+                <p className="text-2xl font-bold text-blue-600 flex items-center">
+                  <FaRupeeSign className="text-xl mr-1" />
+                  {getCabPrice(selectedCab)}
+                </p>
+                <p className="text-xs text-gray-500">For {distance || 0} km journey</p>
               </div>
               <button
                 onClick={handleBookNow}
