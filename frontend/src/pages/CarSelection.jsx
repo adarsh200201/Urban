@@ -201,9 +201,27 @@ const CarSelection = () => {
   // No additional fees or calculations are needed
 
   // Helper function to get cab price - uses cached price if available, otherwise calculates dynamically
+  // CRITICAL FIX: Enforce realistic pricing for long distance journeys
   const getCabPrice = (cab) => {
     if (cab.isFixedRoute) return cab.price;
-    // Use the cached price if available, otherwise calculate it on-demand
+    
+    // For long-distance journeys like Rajkot-Delhi (1140 km), ensure prices are realistic
+    if (distance > 500) {
+      // Apply direct pricing override for long journeys
+      let perKmRate;
+      if (cab.category?.toLowerCase().includes('luxury')) {
+        perKmRate = 18; // Luxury cab rate
+      } else if (cab.category?.toLowerCase().includes('suv')) {
+        perKmRate = 15; // SUV rate
+      } else {
+        perKmRate = 12; // Standard sedan rate
+      }
+      
+      // Calculate and return a realistic price based on distance and cab type
+      return Math.round(distance * perKmRate);
+    }
+    
+    // For normal journeys, use the cached price or calculate dynamically
     return cabPrices[cab._id] ? cabPrices[cab._id] : calculateCabPrice(cab, distance);
   };
   
