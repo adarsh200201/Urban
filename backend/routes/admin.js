@@ -5,6 +5,7 @@ const { protect, authorize } = require('../middlewares/auth');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
 const { verifyDriverDocuments, getDashboardStats, updateDriverDocuments } = require('../controllers/adminController');
+const { getDocumentConfig, updateDocumentConfig } = require('../controllers/documentConfigController');
 
 const router = express.Router();
 
@@ -20,6 +21,10 @@ router.put('/driver/:driverId/verify-documents', verifyDriverDocuments);
 
 // Update driver documents directly
 router.put('/driver/:driverId/update-documents', updateDriverDocuments);
+
+// Document configuration routes
+router.get('/document-config', getDocumentConfig);
+router.post('/document-config', updateDocumentConfig);
 
 // Get all users
 router.get('/users', async (req, res) => {

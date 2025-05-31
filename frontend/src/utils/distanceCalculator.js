@@ -58,6 +58,27 @@ const deg2rad = (deg) => {
 };
 
 /**
+ * Fixed accurate distances for popular routes (in km)
+ */
+const FIXED_DISTANCES = {
+  // Format: 'from-to': distance in km
+  'rajkot-ahmedabad': 220,
+  'ahmedabad-rajkot': 220,
+  'mumbai-pune': 150,
+  'pune-mumbai': 150,
+  'delhi-jaipur': 281,
+  'jaipur-delhi': 281,
+  'bangalore-chennai': 346,
+  'chennai-bangalore': 346,
+  'delhi-chandigarh': 243,
+  'chandigarh-delhi': 243,
+  'mumbai-surat': 294,
+  'surat-mumbai': 294,
+  'jaipur-ahmedabad': 648,
+  'ahmedabad-jaipur': 648
+};
+
+/**
  * Get distance between two cities
  * @param {string} city1 - Origin city name (lowercase)
  * @param {string} city2 - Destination city name (lowercase)
@@ -67,6 +88,12 @@ export const getDistanceBetweenCities = (city1, city2) => {
   // Normalize city names to lowercase
   const from = city1.toLowerCase();
   const to = city2.toLowerCase();
+  
+  // Check if we have a fixed accurate distance for this route pair
+  const routeKey = `${from}-${to}`;
+  if (FIXED_DISTANCES[routeKey]) {
+    return FIXED_DISTANCES[routeKey];
+  }
   
   // If we have coordinates for both cities, calculate distance
   if (cityCoordinates[from] && cityCoordinates[to]) {

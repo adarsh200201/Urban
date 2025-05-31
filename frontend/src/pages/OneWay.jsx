@@ -28,6 +28,41 @@ const OneWay = () => {
     return `${day}-${month}-${year}`;
   };
 
+  // Get current time in HH:MM AM/PM format
+  const getCurrentTime = () => {
+    const now = new Date();
+    let hours = now.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    const minutes = now.getMinutes();
+    return `${hours}:${minutes < 10 ? '0' + minutes : minutes} ${ampm}`;
+  };
+
+  // Convert time string to Date object for comparison
+  const parseTimeString = (timeStr, dateStr) => {
+    // Parse the date string to get year, month, day
+    const dateParts = dateStr.split('-');
+    const day = parseInt(dateParts[0]);
+    const monthIdx = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(dateParts[1]);
+    const year = parseInt(dateParts[2]);
+
+    // Parse the time string
+    const timeRegex = /(\d+):(\d+)\s*(AM|PM)/i;
+    const match = timeStr.match(timeRegex);
+    if (!match) return null;
+
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const ampm = match[3].toUpperCase();
+
+    // Convert to 24-hour format
+    if (ampm === 'PM' && hours < 12) hours += 12;
+    if (ampm === 'AM' && hours === 12) hours = 0;
+
+    return new Date(year, monthIdx, day, hours, minutes);
+  };
+
   // State for cab options from API
   const [cabOptions, setCabOptions] = useState([]);
 
@@ -56,7 +91,7 @@ const OneWay = () => {
   const [availableCabs, setAvailableCabs] = useState([]);
   const [selectedCabId, setSelectedCabId] = useState(null);
   const [departureDate, setDepartureDate] = useState(getCurrentDate());
-  const [departureTime, setDepartureTime] = useState('6:00 AM');
+  const [departureTime, setDepartureTime] = useState(getCurrentTime());
   const [showDetails, setShowDetails] = useState({});
   const [selectedPriceOption, setSelectedPriceOption] = useState('bestPrice'); // 'bestPrice' or 'inclusivePrice'
   const [estimatedTime, setEstimatedTime] = useState(0);
@@ -92,16 +127,16 @@ const OneWay = () => {
           const basePrice = cab.baseKmPrice || 2000;
           const discountedPrice = Math.round(basePrice * 0.9); // 10% discount
           const bestPrice = Math.round(basePrice * 0.85);      // 15% discount
-          
+
           // Calculate taxes
           const gstAmount = Math.round(bestPrice * 0.05);       // 5% GST
           const tollTaxAmount = Math.round(basePrice * 0.03);   // 3% toll tax
           const stateTaxAmount = Math.round(basePrice * 0.04);  // 4% state tax
-          
+
           // Calculate all-inclusive price
           const taxInclusivePrice = bestPrice + gstAmount;
           const allInclusivePrice = taxInclusivePrice + tollTaxAmount + stateTaxAmount;
-          
+
           return {
             id: cab._id,
             name: cab.name,
@@ -153,24 +188,24 @@ const OneWay = () => {
         // Find the city IDs based on names
         const fromCityObj = cities.find(city => city.name.toLowerCase() === from.toLowerCase());
         const toCityObj = cities.find(city => city.name.toLowerCase() === to.toLowerCase());
-        
+
         if (fromCityObj && toCityObj) {
           // Check for fixed route
           const fixedRoutes = await checkFixedRoute(fromCityObj._id, toCityObj._id);
-          
+
           if (fixedRoutes && fixedRoutes.length > 0) {
             // We have fixed routes!
             setIsFixedRoute(true);
             setFixedRouteData(fixedRoutes);
-            
+
             // Set distance and estimated time from fixed route
             setDistance(fixedRoutes[0].distance);
             setEstimatedTime(fixedRoutes[0].estimatedTime);
-            
+
             // Process the fixed route data to match our cab options format
             const fixedCabs = fixedRoutes.map(route => {
               const cabDetails = route.cabType;
-              
+
               return {
                 id: cabDetails._id,
                 name: cabDetails.name,
@@ -197,19 +232,19 @@ const OneWay = () => {
                 estimatedTime: route.estimatedTime
               };
             });
-            
+
             setAvailableCabs(fixedCabs);
-            
+
             if (fixedCabs.length > 0) {
               setSelectedCabId(fixedCabs[0].id);
             }
-            
+
             setIsLoading(false);
             return;
           }
         }
       }
-      
+
       // If not a fixed route, continue with dynamic pricing
       const calculatedDistance = getDistanceBetweenCities(from, to);
       setDistance(calculatedDistance);
@@ -313,18 +348,28 @@ const OneWay = () => {
 
   const handleSearch = () => {
     if (!fromCity || !toCity) {
-      toast.error('Please select both pickup and drop locations');
+      toast.error('Please select both pickup and destination cities');
       return;
     }
 
     if (fromCity === toCity) {
-      toast.error('Pickup and drop locations cannot be the same');
+      toast.error('Pickup and destination cities cannot be the same');
       return;
     }
 
-    // Update URL with search parameters
-    navigate(`/city/one-way-cab?from=${fromCity}&to=${toCity}`);
+    // Validate pickup time is not in the past
+    const selectedDateTime = parseTimeString(departureTime, departureDate);
+    const currentDateTime = new Date();
+
+    if (selectedDateTime && selectedDateTime < currentDateTime) {
+      toast.error('Pickup time cannot be earlier than the current time');
+      return;
+    }
+
     fetchRouteDetails(fromCity, toCity);
+
+    // Update the URL with search parameters
+    navigate(`/city/one-way-cab?from=${fromCity}&to=${toCity}&departureDate=${departureDate}&departureTime=${encodeURIComponent(departureTime)}`);
   };
 
   const handleCitySwap = () => {

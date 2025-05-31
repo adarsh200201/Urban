@@ -17,14 +17,14 @@ const Cabs = () => {
     dispatch(getAllCabs());
   }, [dispatch]);
   
-  // Show toast messages on success or error
+  // Show toast messages on success or error (with toastId to prevent duplicates)
   useEffect(() => {
     if (isError) {
-      toast.error(message);
+      toast.error(message, { toastId: 'admin-error' });
     }
     
     if (isSuccess && message) {
-      toast.success(message);
+      toast.success(message, { toastId: 'admin-success' });
     }
   }, [isError, isSuccess, message]);
   
@@ -43,7 +43,8 @@ const Cabs = () => {
     driverCharges: { included: true, amount: 0 },
     nightCharges: { included: true, amount: 0 },
     features: [],
-    active: true
+    active: true,
+    originalImageUrl: ''
   });
   
   // Image upload state
@@ -52,6 +53,7 @@ const Cabs = () => {
 
   const handleOpenModal = (cab = null) => {
     if (cab) {
+      // Store the original cab object to preserve all data including the image URL
       setFormData({
         name: cab.name,
         description: cab.description,
@@ -75,7 +77,9 @@ const Cabs = () => {
           included: cab.nightCharges?.included !== undefined ? cab.nightCharges.included : true,
           amount: cab.nightCharges?.amount || 0
         },
-        active: cab.active !== undefined ? cab.active : true
+        active: cab.active !== undefined ? cab.active : true,
+        // Store the original image URL to preserve it if no new image is uploaded
+        originalImageUrl: cab.imageUrl || ''
       });
       setCurrentCab(cab);
       setImagePreview(cab.imageUrl || '');
@@ -93,17 +97,18 @@ const Cabs = () => {
         features: [],
         fuelCharges: {
           included: true,
-          charge: 0
+          amount: 0
         },
         driverCharges: {
           included: true,
-          charge: 0
+          amount: 0
         },
         nightCharges: {
           included: true,
-          charge: 0
+          amount: 0
         },
-        active: true
+        active: true,
+        originalImageUrl: ''
       });
       setCurrentCab(null);
       setImagePreview('');
@@ -232,8 +237,8 @@ const Cabs = () => {
         },
         active: formData.active,
         features: formData.features || [],
-        // Use direct image URL if provided
-        imageUrl: formData.directImageUrl || ''
+        // Preserve existing image URL if updating and no new image is uploaded
+        imageUrl: currentCab && !imageFile ? formData.originalImageUrl : (formData.directImageUrl || '')
       };
       
       console.log('Step 1: Creating cab with data:', cabData);
@@ -247,7 +252,7 @@ const Cabs = () => {
           cabData,
           config
         );
-        toast.success('Cab updated successfully');
+        toast.success('Cab updated successfully', { toastId: 'cab-update' });
       } else {
         // Create new cab
         response = await axios.post(
@@ -255,7 +260,7 @@ const Cabs = () => {
           cabData,
           config
         );
-        toast.success('Cab created successfully');
+        toast.success('Cab created successfully', { toastId: 'cab-create' });
       }
       
       console.log('Cab created/updated:', response.data);
@@ -608,36 +613,51 @@ const Cabs = () => {
                     </select>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="baseKmPrice" className="block text-sm font-medium text-gray-700">Base Price per Km (₹)*</label>
-                      <input
-                        type="number"
-                        name="baseKmPrice"
-                        id="baseKmPrice"
-                        value={formData.baseKmPrice}
-                        onChange={handleChange}
-                        min="0"
-                        step="0.01"
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        required
-                      />
+                      <label htmlFor="baseKmPrice" className="block text-sm font-medium text-gray-700">
+                        Base Fare (₹)
+                      </label>
+                      <div className="mt-1 relative rounded-md shadow-sm">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">₹</span>
+                        </div>
+                        <input
+                          type="number"
+                          name="baseKmPrice"
+                          id="baseKmPrice"
+                          value={formData.baseKmPrice}
+                          onChange={handleChange}
+                          placeholder="0.00"
+                          className="mt-1 block w-full pl-7 shadow-sm sm:text-sm border-gray-300 rounded-md"
+                        />
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">Base price for the ride</p>
                     </div>
                     <div>
-                      <label htmlFor="extraFarePerKm" className="block text-sm font-medium text-gray-700">Extra Per KM Charge (₹)</label>
-                      <input
-                        type="number"
-                        name="extraFarePerKm"
-                        id="extraFarePerKm"
-                        value={formData.extraFarePerKm}
-                        onChange={handleChange}
-                        min="0"
-                        step="0.01"
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      />
+                      <label htmlFor="extraFarePerKm" className="block text-sm font-medium text-gray-700">
+                        Extra Fare Per KM (₹/km)
+                      </label>
+                      <div className="mt-1 relative rounded-md shadow-sm">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">₹</span>
+                        </div>
+                        <input
+                          type="number"
+                          name="extraFarePerKm"
+                          id="extraFarePerKm"
+                          value={formData.extraFarePerKm}
+                          onChange={handleChange}
+                          placeholder="0.00"
+                          className="mt-1 block w-full pl-7 shadow-sm sm:text-sm border-gray-300 rounded-md"
+                        />
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">per km</span>
+                        </div>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">Additional charge per kilometer</p>
                     </div>
                   </div>
-                  
                   
                   {/* Features */}
                   <div>

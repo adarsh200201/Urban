@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
-import { FaPlus, FaSearch, FaEdit, FaToggleOn, FaToggleOff, FaCheckCircle, FaTimesCircle, FaTaxi, FaFileAlt, FaEye } from 'react-icons/fa';
-import { getAllDrivers, toggleDriverStatus, toggleDriverApproval, verifyDriverDocument, updateDriverDocuments, reset } from '../../features/admin/adminSlice';
+import { FaPlus, FaSearch, FaEdit, FaToggleOn, FaToggleOff, FaCheckCircle, FaTimesCircle, FaTaxi, FaFileAlt, FaEye, FaSave } from 'react-icons/fa';
+import { getAllDrivers, toggleDriverStatus, toggleDriverApproval, verifyDriverDocument, updateDriverDocuments, updateDriverDetails, reset } from '../../features/admin/adminSlice';
 import DriverDocumentPreview from '../../components/Admin/DriverDocumentPreview';
 
 const DriverManagement = () => {
@@ -13,6 +13,18 @@ const DriverManagement = () => {
   const [showAddDriver, setShowAddDriver] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [driverForm, setDriverForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    vehicleModel: '',
+    vehicleNumber: '',
+    vehicleYear: '',
+    vehicleColor: '',
+    license: '',
+    licenseExpiry: ''
+  });
 
   useEffect(() => {
     dispatch(getAllDrivers());
@@ -105,6 +117,124 @@ const DriverManagement = () => {
     setSelectedDriver(null);
   };
   
+  // Edit driver details
+  const editDriver = (driver) => {
+    setSelectedDriver(driver);
+    // Fill the form with driver details
+    setDriverForm({
+      name: driver.user?.name || driver.name || '',
+      phone: driver.user?.phone || driver.phone || '',
+      email: driver.user?.email || driver.email || '',
+      vehicleModel: driver.vehicleModel || '',
+      vehicleNumber: driver.vehicleNumber || '',
+      vehicleYear: driver.vehicleYear?.toString() || '',
+      vehicleColor: driver.vehicleColor || '',
+      license: driver.license || '',
+      licenseExpiry: driver.licenseExpiry ? new Date(driver.licenseExpiry).toISOString().split('T')[0] : ''
+    });
+    setShowEditModal(true);
+  };
+  
+  // Close edit modal
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setSelectedDriver(null);
+    setDriverForm({
+      name: '',
+      phone: '',
+      email: '',
+      vehicleModel: '',
+      vehicleNumber: '',
+      vehicleYear: '',
+      vehicleColor: '',
+      license: '',
+      licenseExpiry: ''
+    });
+  };
+  
+  // Handle input change in edit form
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setDriverForm({
+      ...driverForm,
+      [name]: value
+    });
+  };
+  
+  // Submit edit form
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    // Validate the form
+    const { name, phone, email, vehicleModel, vehicleNumber, vehicleYear, vehicleColor, license, licenseExpiry } = driverForm;
+    
+    // Required fields validation
+    if (!name || !phone || !vehicleModel || !vehicleNumber) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
+    // Phone number validation (must be 10 digits)
+    if (!/^\d{10}$/.test(phone)) {
+      toast.error('Phone number must be 10 digits');
+      return;
+    }
+    
+    // Email validation (if provided)
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    
+    // Vehicle number validation (format check)
+    const vehicleNumberPattern = /^[A-Z]{2}\s?[0-9]{1,2}\s?[A-Z]{1,2}\s?[0-9]{4}$/;
+    if (!vehicleNumberPattern.test(vehicleNumber.toUpperCase())) {
+      toast.error('Please enter a valid vehicle number (e.g., MH 01 AB 1234)');
+      return;
+    }
+    
+    // Vehicle year validation
+    if (vehicleYear) {
+      const currentYear = new Date().getFullYear();
+      const yearValue = parseInt(vehicleYear);
+      if (isNaN(yearValue) || yearValue < 1990 || yearValue > currentYear) {
+        toast.error(`Vehicle year must be between 1990 and ${currentYear}`);
+        return;
+      }
+    }
+    
+    // License expiry validation
+    if (licenseExpiry) {
+      const expiryDate = new Date(licenseExpiry);
+      const today = new Date();
+      
+      if (expiryDate < today) {
+        toast.warning('The license expiry date is in the past');
+        // Still allow submission but with warning
+      }
+    }
+    
+    // Prepare data for submission - ensuring all numeric fields are properly converted
+    const preparedData = {
+      ...driverForm,
+      vehicleYear: vehicleYear ? parseInt(vehicleYear) : null,
+      // Format phone as string to ensure it's not interpreted as a number
+      phone: phone.toString(),
+      // Convert any other numeric fields as needed
+    };
+    
+    // Show info toast with unique ID to prevent duplicates
+    toast.info('Updating driver details...', { toastId: `update-${selectedDriver._id}` });
+    
+    // Dispatch update action
+    dispatch(updateDriverDetails({
+      driverId: selectedDriver._id,
+      driverDetails: preparedData
+    }));
+    
+    // Close the modal after submission
+    closeEditModal();
+  };
+  
   // Handle document approval and updates
   const handleDocumentApproval = (driverId, documentKey, isApproved, documents) => {
     // If documents object is provided, this is a manual update of document URLs
@@ -171,28 +301,28 @@ const DriverManagement = () => {
               </colgroup>
               <thead>
                 <tr className="bg-gray-100">
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Driver
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/8">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Vehicle
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/8">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     License
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/10">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Availability
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/10">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Approval Status
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Rides
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Rating
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -302,6 +432,7 @@ const DriverManagement = () => {
                         </button>
                         
                         <button
+                          onClick={() => editDriver(driver)}
                           className="px-3 py-1 rounded text-xs font-medium block w-full text-center bg-blue-100 text-blue-800 hover:bg-blue-200"
                         >
                           <FaEdit className="inline mr-1" />
@@ -338,6 +469,158 @@ const DriverManagement = () => {
           >
             <FaPlus className="mr-2" /> Add Driver
           </button>
+        </div>
+      )}
+      
+      {/* Edit Driver Modal */}
+      {showEditModal && selectedDriver && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full m-4 overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-semibold">
+                Edit Driver: {selectedDriver.user?.name || selectedDriver.name || 'Driver'}
+              </h2>
+              <button
+                onClick={closeEditModal}
+                className="text-gray-500 hover:text-gray-700 focus:outline-none"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditSubmit} className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Driver Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={driverForm.name}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="Full Name"
+                    required
+                  />
+                </div>
+                
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={driverForm.phone}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="Phone Number"
+                    required
+                  />
+                </div>
+                
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={driverForm.email}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="Email Address"
+                  />
+                </div>
+                
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">License Number</label>
+                  <input
+                    type="text"
+                    name="license"
+                    value={driverForm.license}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="License Number"
+                  />
+                </div>
+                
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">License Expiry Date</label>
+                  <input
+                    type="date"
+                    name="licenseExpiry"
+                    value={driverForm.licenseExpiry}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                  />
+                </div>
+                
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Model</label>
+                  <input
+                    type="text"
+                    name="vehicleModel"
+                    value={driverForm.vehicleModel}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="Vehicle Model"
+                    required
+                  />
+                </div>
+                
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Number</label>
+                  <input
+                    type="text"
+                    name="vehicleNumber"
+                    value={driverForm.vehicleNumber}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="Vehicle Registration Number"
+                    required
+                  />
+                </div>
+                
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Year</label>
+                  <input
+                    type="number"
+                    name="vehicleYear"
+                    value={driverForm.vehicleYear}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="Vehicle Year"
+                  />
+                </div>
+                
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Color</label>
+                  <input
+                    type="text"
+                    name="vehicleColor"
+                    value={driverForm.vehicleColor}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="Vehicle Color"
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition flex items-center"
+                >
+                  <FaSave className="mr-2" /> Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
       

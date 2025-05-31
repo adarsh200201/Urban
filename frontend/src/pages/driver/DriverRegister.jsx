@@ -3,12 +3,14 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { FaUser, FaEnvelope, FaLock, FaPhone, FaCar, FaIdCard, FaCalendarAlt, FaSpinner, FaTaxi } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaLock, FaPhone, FaCar, FaIdCard, FaCalendarAlt, FaSpinner, FaTaxi, FaExclamationCircle } from 'react-icons/fa';
 import { registerDriver } from '../../features/driver/driverAuthSlice';
+import { useDocumentRequirements } from '../../context/DocumentRequirementsContext';
 
 const DriverRegister = () => {
   const [cabTypes, setCabTypes] = useState([]);
   const [loadingCabTypes, setLoadingCabTypes] = useState(false);
+  const { documentConfig, loading: loadingDocConfig, error: docConfigError } = useDocumentRequirements();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -137,11 +139,24 @@ const DriverRegister = () => {
     }
   };
   
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     
     if (password !== confirmPassword) {
       toast.error('Passwords do not match');
+      return;
+    }
+    
+    // Check if all required documents are provided
+    const requiredDocKeys = Object.entries(documentConfig)
+      .filter(([_, config]) => config.required)
+      .map(([key]) => key);
+    
+    const missingDocs = requiredDocKeys.filter(key => !formData[key]);
+    
+    if (missingDocs.length > 0) {
+      const missingDocNames = missingDocs.map(key => documentConfig[key].name).join(', ');
+      toast.error(`Missing required documents: ${missingDocNames}`);
       return;
     }
     
@@ -187,15 +202,6 @@ const DriverRegister = () => {
         documentCount++;
       }
     });
-    
-    // Validate mandatory documents
-    const mandatoryDocs = ['aadhaarCard', 'driversLicense', 'driverPhoto'];
-    const missingMandatoryDocs = mandatoryDocs.filter(doc => !formData[doc]);
-    
-    if (missingMandatoryDocs.length > 0) {
-      toast.error(`Please upload all mandatory documents: ${missingMandatoryDocs.join(', ')}`);
-      return;
-    }
     
     console.log(`${documentCount} documents added to form data`);
     if (documentCount === 0) {
@@ -463,206 +469,129 @@ const DriverRegister = () => {
                 </div>
                 
                 <div className="space-y-6">
-                  {/* Personal Documents Section */}
-                  <div>
-                    <h3 className="font-medium text-gray-800 mb-3">Personal Documents</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Aadhaar Card */}
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <label htmlFor="aadhaarCard" className="block text-gray-700 mb-2 font-medium">
-                          Aadhaar Card *
-                        </label>
-                        <input
-                          type="file"
-                          id="aadhaarCard"
-                          name="aadhaarCard"
-                          onChange={onChange}
-                          className="form-input"
-                          accept=".jpg,.jpeg,.png"
-                          required
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Clear image of your Aadhaar Card (front side)
-                        </p>
-                      </div>
-                      
-                      {/* Driver's License */}
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <label htmlFor="driversLicense" className="block text-gray-700 mb-2 font-medium">
-                          Driver's License *
-                        </label>
-                        <input
-                          type="file"
-                          id="driversLicense"
-                          name="driversLicense"
-                          onChange={onChange}
-                          className="form-input"
-                          accept=".jpg,.jpeg,.png"
-                          required
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Commercial driver's license (front side)
-                        </p>
-                      </div>
-                      
-                      {/* Driver's Photo */}
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <label htmlFor="driverPhoto" className="block text-gray-700 mb-2 font-medium">
-                          Passport Size Photo *
-                        </label>
-                        <input
-                          type="file"
-                          id="driverPhoto"
-                          name="driverPhoto"
-                          onChange={onChange}
-                          className="form-input"
-                          accept=".jpg,.jpeg,.png"
-                          required
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Recent passport-sized photograph with plain background
-                        </p>
+                  {/* Documents Section */}
+                  {loadingDocConfig ? (
+                    <div className="animate-pulse flex flex-col items-center py-8">
+                      <div className="h-6 w-48 bg-gray-300 rounded mb-4"></div>
+                      <div className="h-32 w-full bg-gray-200 rounded"></div>
+                    </div>
+                  ) : docConfigError ? (
+                    <div className="bg-red-50 p-4 rounded-lg border border-red-100 mb-4">
+                      <div className="flex items-center">
+                        <FaExclamationCircle className="text-red-500 mr-2" />
+                        <p>Error loading document requirements. Please try again later.</p>
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Vehicle Documents Section */}
-                  <div>
-                    <h3 className="font-medium text-gray-800 mb-3">Vehicle Documents (If you own the vehicle)</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Vehicle RC */}
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <label htmlFor="vehicleRC" className="block text-gray-700 mb-2 font-medium">
-                          Vehicle Registration Certificate (RC)
-                        </label>
-                        <input
-                          type="file"
-                          id="vehicleRC"
-                          name="vehicleRC"
-                          onChange={onChange}
-                          className="form-input"
-                          accept=".jpg,.jpeg,.png"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Clear image of your vehicle's RC
-                        </p>
+                  ) : (
+                    <>
+                      {/* Personal Documents Section */}
+                      <div>
+                        <h3 className="font-medium text-gray-800 mb-3">Personal Documents</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Filter and map through personal documents */}
+                          {Object.entries(documentConfig)
+                            .filter(([key]) => ['aadhaarCard', 'driversLicense', 'driverPhoto'].includes(key))
+                            .map(([key, config]) => (
+                              <div key={key} className="border border-gray-200 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <label htmlFor={key} className="block text-gray-700 font-medium">
+                                    {config.name}
+                                  </label>
+                                  {config.required && (
+                                    <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded">
+                                      Required
+                                    </span>
+                                  )}
+                                </div>
+                                <input
+                                  type="file"
+                                  id={key}
+                                  name={key}
+                                  onChange={onChange}
+                                  className="form-input"
+                                  accept=".jpg,.jpeg,.png"
+                                  required={config.required}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">{config.description}</p>
+                              </div>
+                            ))
+                          }
+                        </div>
                       </div>
                       
-                      {/* Insurance Certificate */}
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <label htmlFor="insuranceCertificate" className="block text-gray-700 mb-2 font-medium">
-                          Insurance Certificate
-                        </label>
-                        <input
-                          type="file"
-                          id="insuranceCertificate"
-                          name="insuranceCertificate"
-                          onChange={onChange}
-                          className="form-input"
-                          accept=".jpg,.jpeg,.png"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Valid insurance certificate for your vehicle
-                        </p>
+      
+                      {/* Vehicle Documents Section */}
+                      <div>
+                        <h3 className="font-medium text-gray-800 mb-3">Vehicle Documents</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Filter and map through vehicle documents */}
+                          {Object.entries(documentConfig)
+                            .filter(([key]) => ['vehicleRC', 'insuranceCertificate', 'pucCertificate', 'fitnessCertificate', 'routePermit'].includes(key))
+                            .map(([key, config]) => (
+                              <div key={key} className="border border-gray-200 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <label htmlFor={key} className="block text-gray-700 font-medium">
+                                    {config.name}
+                                  </label>
+                                  {config.required && (
+                                    <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded">
+                                      Required
+                                    </span>
+                                  )}
+                                </div>
+                                <input
+                                  type="file"
+                                  id={key}
+                                  name={key}
+                                  onChange={onChange}
+                                  className="form-input"
+                                  accept=".jpg,.jpeg,.png"
+                                  required={config.required}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">{config.description}</p>
+                              </div>
+                            ))
+                          }
+                        </div>
                       </div>
                       
-                      {/* PUC Certificate */}
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <label htmlFor="pucCertificate" className="block text-gray-700 mb-2 font-medium">
-                          Pollution Under Control (PUC) Certificate
-                        </label>
-                        <input
-                          type="file"
-                          id="pucCertificate"
-                          name="pucCertificate"
-                          onChange={onChange}
-                          className="form-input"
-                          accept=".jpg,.jpeg,.png"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Valid PUC certificate
-                        </p>
+      
+                      {/* Vehicle Photos Section */}
+                      <div>
+                        <h3 className="font-medium text-gray-800 mb-3">Vehicle Photos</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Filter and map through vehicle photos */}
+                          {Object.entries(documentConfig)
+                            .filter(([key]) => ['vehiclePhotoFront', 'vehiclePhotoBack'].includes(key))
+                            .map(([key, config]) => (
+                              <div key={key} className="border border-gray-200 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <label htmlFor={key} className="block text-gray-700 font-medium">
+                                    {config.name}
+                                  </label>
+                                  {config.required && (
+                                    <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded">
+                                      Required
+                                    </span>
+                                  )}
+                                </div>
+                                <input
+                                  type="file"
+                                  id={key}
+                                  name={key}
+                                  onChange={onChange}
+                                  className="form-input"
+                                  accept=".jpg,.jpeg,.png"
+                                  required={config.required}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">{config.description}</p>
+                              </div>
+                            ))
+                          }
+                        </div>
                       </div>
-                      
-                      {/* Fitness Certificate */}
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <label htmlFor="fitnessCertificate" className="block text-gray-700 mb-2 font-medium">
-                          Fitness Certificate
-                        </label>
-                        <input
-                          type="file"
-                          id="fitnessCertificate"
-                          name="fitnessCertificate"
-                          onChange={onChange}
-                          className="form-input"
-                          accept=".jpg,.jpeg,.png"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Vehicle fitness certificate if applicable
-                        </p>
-                      </div>
-                      
-                      {/* Route Permit */}
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <label htmlFor="routePermit" className="block text-gray-700 mb-2 font-medium">
-                          Route Permit (if applicable)
-                        </label>
-                        <input
-                          type="file"
-                          id="routePermit"
-                          name="routePermit"
-                          onChange={onChange}
-                          className="form-input"
-                          accept=".jpg,.jpeg,.png"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Commercial route permit for your vehicle
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Vehicle Photos Section */}
-                  <div>
-                    <h3 className="font-medium text-gray-800 mb-3">Vehicle Photos</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Vehicle Front Photo */}
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <label htmlFor="vehiclePhotoFront" className="block text-gray-700 mb-2 font-medium">
-                          Vehicle Front View
-                        </label>
-                        <input
-                          type="file"
-                          id="vehiclePhotoFront"
-                          name="vehiclePhotoFront"
-                          onChange={onChange}
-                          className="form-input"
-                          accept=".jpg,.jpeg,.png"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Clear front view of your vehicle showing the number plate
-                        </p>
-                      </div>
-                      
-                      {/* Vehicle Back Photo */}
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <label htmlFor="vehiclePhotoBack" className="block text-gray-700 mb-2 font-medium">
-                          Vehicle Back View
-                        </label>
-                        <input
-                          type="file"
-                          id="vehiclePhotoBack"
-                          name="vehiclePhotoBack"
-                          onChange={onChange}
-                          className="form-input"
-                          accept=".jpg,.jpeg,.png"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Clear back view of your vehicle showing the number plate
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

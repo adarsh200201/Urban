@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { FaUsers, FaSuitcase, FaSnowflake, FaCar, FaTaxi, FaRupeeSign, FaMapMarkerAlt, FaArrowRight, FaCheck } from 'react-icons/fa';
+import { FaUsers, FaSuitcase, FaSnowflake, FaCar, FaTaxi, FaRupeeSign, FaMapMarkerAlt, FaArrowRight, FaCheck, FaCalendarAlt, FaClock, FaEdit } from 'react-icons/fa';
 import { checkFixedRoute } from '../services/routesService';
 import { calculateCabPrice } from '../utils/priceCalculator';
+import { getDistanceBetweenCities } from '../utils/distanceCalculator';
 
 const CarSelection = () => {
   const location = useLocation();
@@ -18,6 +19,14 @@ const CarSelection = () => {
   const [isFixedRoute, setIsFixedRoute] = useState(false);
   const [fixedRouteData, setFixedRouteData] = useState(null);
   
+  // Trip time editing states
+  const [isEditingTimes, setIsEditingTimes] = useState(false);
+  const [pickupDate, setPickupDate] = useState('');
+  const [pickupTime, setPickupTime] = useState('');
+  const [returnDate, setReturnDate] = useState('');
+  const [returnTime, setReturnTime] = useState('');
+  const [timeValidationError, setTimeValidationError] = useState('');
+  
   // Extract query parameters from URL
   const queryParams = new URLSearchParams(location.search);
   const fromCity = queryParams.get('from');
@@ -26,6 +35,100 @@ const CarSelection = () => {
   const timeStr = queryParams.get('time');
   const journeyType = queryParams.get('journeyType') || 'outstation';
   const tripType = queryParams.get('tripType') || 'oneWay';
+  const returnDateStr = queryParams.get('returnDate');
+  const returnTimeStr = queryParams.get('returnTime');
+  
+  // Initialize trip time values when component mounts
+  useEffect(() => {
+    // Format today's date as YYYY-MM-DD for the date input default
+    const today = new Date();
+    const formattedToday = today.toISOString().split('T')[0];
+    
+    // Set pickup date and time
+    setPickupDate(dateStr || formattedToday);
+    setPickupTime(timeStr || '10:00');
+    
+    // Set return date and time if it's a round trip
+    if (tripType === 'roundTrip') {
+      // If return date is provided, use it; otherwise, set to tomorrow
+      if (returnDateStr) {
+        setReturnDate(returnDateStr);
+      } else {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        setReturnDate(tomorrow.toISOString().split('T')[0]);
+      }
+      
+      // Set return time
+      setReturnTime(returnTimeStr || '10:00');
+    }
+  }, [dateStr, timeStr, returnDateStr, returnTimeStr, tripType]);
+  
+  // Validate trip times
+  const validateTripTimes = () => {
+    setTimeValidationError('');
+    
+    try {
+      const pickupDateTime = new Date(`${pickupDate}T${pickupTime}`);
+      const now = new Date();
+      
+      // Ensure pickup is in the future
+      if (pickupDateTime < now) {
+        setTimeValidationError('Pickup time must be in the future');
+        return false;
+      }
+      
+      // For round trips, validate return date/time
+      if (tripType === 'roundTrip' && returnDate) {
+        const returnDateTime = new Date(`${returnDate}T${returnTime}`);
+        
+        // Ensure return is after pickup
+        if (returnDateTime <= pickupDateTime) {
+          setTimeValidationError('Return time must be after pickup time');
+          return false;
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Date validation error:', error);
+      setTimeValidationError('Invalid date format');
+      return false;
+    }
+  };
+  
+  // Update trip times and refresh cab prices
+  const handleTimeUpdate = () => {
+    if (!validateTripTimes()) {
+      return;
+    }
+    
+    // Update URL parameters with new times
+    const updatedParams = new URLSearchParams(location.search);
+    updatedParams.set('date', pickupDate);
+    updatedParams.set('time', pickupTime);
+    
+    if (tripType === 'roundTrip') {
+      updatedParams.set('returnDate', returnDate);
+      updatedParams.set('returnTime', returnTime);
+    }
+    
+    // Update URL without refreshing the page
+    window.history.replaceState(
+      {}, 
+      '', 
+      `${window.location.pathname}?${updatedParams.toString()}`
+    );
+    
+    // Exit editing mode
+    setIsEditingTimes(false);
+    
+    // Toast notification
+    toast.success('Trip times updated successfully');
+    
+    // Optionally: refresh cab prices if they depend on time/date
+    // fetchCabData();
+  };
   
   // API URL - use environment variable or fallback to local development
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -106,9 +209,28 @@ const CarSelection = () => {
   
   // Shared handler for booking button clicks
   const handleCabBooking = (e, cab) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent the cab card click event
+    
+    // Set as selected cab
     setSelectedCab(cab);
-    handleBookNow();
+    
+    // Check if user is logged in (assuming we have a userInfo in localStorage)
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+    const isLoggedIn = userInfo && userInfo.token;
+    
+    if (isLoggedIn) {
+      // If logged in, proceed directly to booking/payment page
+      handleBookNow();
+    } else {
+      // If not logged in, just select the cab and show a toast
+      toast.success(`${cab.name} selected`);
+      
+      // Optionally, scroll to the bottom where the sticky bar appears
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   };
 
   // Function to fetch real cab data from the database
@@ -268,6 +390,10 @@ const CarSelection = () => {
       return;
     }
     
+    // Check if user is logged in
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+    const isLoggedIn = userInfo && userInfo.token;
+    
     // Construct query parameters to pass to the next page
     const params = new URLSearchParams();
     params.append('from', fromCity);
@@ -283,6 +409,27 @@ const CarSelection = () => {
     
     if (dateStr) params.append('travelDate', dateStr);
     if (timeStr) params.append('travelTime', timeStr);
+    if (tripType === 'roundTrip') {
+      if (returnDate) params.append('returnDate', returnDate);
+      if (returnTime) params.append('returnTime', returnTime);
+    }
+    
+    // Store booking intent data in local storage
+    const bookingIntent = {
+      from: fromCity,
+      to: toCity,
+      cabId: selectedCab._id,
+      cabName: selectedCab.name,
+      type: tripType,
+      amount: cabPrices[selectedCab._id] || selectedCab.baseKmPrice,
+      distance: distance,
+      pickupLocation: selectedCab.vehicleLocation || '',
+      travelDate: dateStr,
+      travelTime: timeStr,
+      returnDate: returnDate || '',
+      returnTime: returnTime || '',
+      timestamp: new Date().toISOString()
+    };
     
     // Store selected cab data in local storage for persistence
     localStorage.setItem('selectedCabData', JSON.stringify({
@@ -292,8 +439,15 @@ const CarSelection = () => {
       imageUrl: selectedCab.imageUrl
     }));
     
-    // Navigate to customer details page
-    navigate(`/booking/customer-details?${params.toString()}`);
+    if (isLoggedIn) {
+      // If logged in, proceed directly to booking/payment page
+      navigate(`/booking/customer-details?${params.toString()}`);
+    } else {
+      // If not logged in, save booking intent and redirect to login
+      localStorage.setItem('bookingIntent', JSON.stringify(bookingIntent));
+      toast.info('Please log in to continue with your booking');
+      navigate(`/login?redirect=/booking/customer-details&${params.toString()}`);
+    }
   };
   
   if (isLoading) {
@@ -473,31 +627,30 @@ const CarSelection = () => {
                 
                 {/* Cab Type & Model */}
                 <div className="text-center mb-4">
-                  <h2 className="text-xl font-bold uppercase mb-1">{cab.name}</h2>
-                  <p className="text-gray-600">{cab.description} <span className="font-medium">({cab.acType})</span></p>
-                </div>
-                
-                {/* Features Section */}
-                <div className="border-t border-gray-200 pt-4 pb-2">
-                  {/* Included Km */}
-                  <div className="flex justify-between mb-3">
-                    <div className="text-gray-600 font-medium">Distance</div>
-                    <div className="font-semibold">{distance || 0} km</div>
-                  </div>
                   
-                  {/* Extra Fare */}
-                  <div className="flex justify-between mb-3">
-                    <div className="text-gray-600 font-medium">Extra fare/Km</div>
-                    <div className="font-semibold">₹ {cab.extraFarePerKm || 0}/Km</div>
-                  </div>
-                  
-                  {/* Included Km */}
-                  <div className="flex justify-between mb-3">
-                    <div className="text-gray-600 font-medium">Included Km</div>
-                    <div className="font-semibold">{cab.includedKm || 0} km</div>
-                  </div>
-                  
-                  {/* Fuel Charges */}
+                  {tripType === 'roundTrip' && (
+                    <div>
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Return Date</label>
+                        <input 
+                          type="date" 
+                          value={returnDate}
+                          onChange={(e) => setReturnDate(e.target.value)}
+                          className="p-2 border rounded-md w-full"
+                          min={pickupDate || new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Return Time</label>
+                        <input 
+                          type="time" 
+                          value={returnTime}
+                          onChange={(e) => setReturnTime(e.target.value)}
+                          className="p-2 border rounded-md w-full"
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div className="flex justify-between mb-3">
                     <div className="text-gray-600 font-medium">Fuel Charges</div>
                     <div className="font-semibold">{cab.fuelChargesIncluded ? 'Included' : 'Extra'}</div>

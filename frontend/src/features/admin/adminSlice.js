@@ -21,7 +21,9 @@ const initialState = {
   isError: false,
   isSuccess: false,
   isLoading: false,
-  message: ''
+  message: '',
+  cityToEdit: null,
+  routeToEdit: null
 };
 
 // Get dashboard stats
@@ -125,6 +127,40 @@ export const deleteUser = createAsyncThunk(
       };
       
       const response = await axios.delete(`${API_URL}/users/${id}`, config);
+      
+      return response.data;
+    } catch (error) {
+      const message = 
+        (error.response && 
+          error.response.data && 
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+        
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Toggle user status (active/inactive)
+export const toggleUserStatus = createAsyncThunk(
+  'admin/toggleUserStatus',
+  async ({ userId, newStatus }, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.user.token;
+      
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      const response = await axios.put(
+        `${API_URL}/users/${userId}/status`,
+        { status: newStatus },
+        config
+      );
       
       return response.data;
     } catch (error) {
@@ -746,6 +782,46 @@ export const verifyDriverDocument = createAsyncThunk(
   }
 );
 
+// Update driver details
+export const updateDriverDetails = createAsyncThunk(
+  'admin/updateDriverDetails',
+  async ({ driverId, driverDetails }, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.user.token;
+      
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      };
+      
+      // Ensure numeric fields are properly converted to numbers
+      const formattedData = {
+        ...driverDetails,
+        vehicleYear: driverDetails.vehicleYear ? parseInt(driverDetails.vehicleYear) : undefined
+      };
+      
+      const response = await axios.put(
+        `${API_URL}/driver/${driverId}`, 
+        formattedData, 
+        config
+      );
+      
+      return response.data.data;
+    } catch (error) {
+      const message = 
+        (error.response && 
+          error.response.data && 
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+        
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
 // Get pending bookings
 export const getPendingBookings = createAsyncThunk(
   'admin/getPendingBookings',
@@ -776,6 +852,121 @@ export const getPendingBookings = createAsyncThunk(
 );
 
 // Assign driver to booking
+// City Management
+export const getCityManagementList = createAsyncThunk(
+  'admin/getCityManagementList',
+  async (_, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.user.token;
+      
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+      
+      const response = await axios.get(`${API_URL}/cities`, config);
+      
+      return response.data;
+    } catch (error) {
+      const message = 
+        (error.response && 
+          error.response.data && 
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+        
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const addCity = createAsyncThunk(
+  'admin/addCity',
+  async (cityData, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.user.token;
+      
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      const response = await axios.post(`${API_URL}/cities`, cityData, config);
+      
+      return response.data;
+    } catch (error) {
+      const message = 
+        (error.response && 
+          error.response.data && 
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+        
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const updateCity = createAsyncThunk(
+  'admin/updateCity',
+  async ({ cityId, cityData }, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.user.token;
+      
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      const response = await axios.put(`${API_URL}/cities/${cityId}`, cityData, config);
+      
+      return response.data;
+    } catch (error) {
+      const message = 
+        (error.response && 
+          error.response.data && 
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+        
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const deleteCity = createAsyncThunk(
+  'admin/deleteCity',
+  async (cityId, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().auth.user.token;
+      
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+      
+      await axios.delete(`${API_URL}/cities/${cityId}`, config);
+      
+      return { id: cityId };
+    } catch (error) {
+      const message = 
+        (error.response && 
+          error.response.data && 
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+        
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
 export const assignDriverToBooking = createAsyncThunk(
   'admin/assignDriverToBooking',
   async ({ bookingId, driverId }, thunkAPI) => {
@@ -853,7 +1044,13 @@ export const adminSlice = createSlice({
       state.isError = false;
       state.isSuccess = false;
       state.message = '';
-    }
+    },
+    setCityToEdit: (state, action) => {
+      state.cityToEdit = action.payload;
+    },
+    setRouteToEdit: (state, action) => {
+      state.routeToEdit = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -894,6 +1091,23 @@ export const adminSlice = createSlice({
         );
       })
       .addCase(updateUser.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      .addCase(toggleUserStatus.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(toggleUserStatus.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.message = `User status updated to ${action.payload.status}`;
+        // Update the user in the users list
+        state.users = state.users.map(user => 
+          user._id === action.payload._id ? action.payload : user
+        );
+      })
+      .addCase(toggleUserStatus.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
         state.message = action.payload;
@@ -1008,6 +1222,20 @@ export const adminSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
+      // City management reducers
+      .addCase(getCityManagementList.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getCityManagementList.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.cities = action.payload.data;
+      })
+      .addCase(getCityManagementList.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
       // Driver management reducers
       .addCase(getAllDrivers.pending, (state) => {
         state.isLoading = true;
@@ -1061,6 +1289,29 @@ export const adminSlice = createSlice({
         }
       })
       .addCase(toggleDriverStatus.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      .addCase(updateDriverDetails.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(updateDriverDetails.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.message = 'Driver details updated successfully';
+        // Update the driver in the drivers list
+        state.drivers = state.drivers.map(driver => 
+          driver._id === action.payload._id ? action.payload : driver
+        );
+        // Also update in available drivers if present
+        if (state.availableDrivers.some(driver => driver._id === action.payload._id)) {
+          state.availableDrivers = state.availableDrivers.map(driver => 
+            driver._id === action.payload._id ? action.payload : driver
+          );
+        }
+      })
+      .addCase(updateDriverDetails.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
         state.message = action.payload;
@@ -1119,9 +1370,55 @@ export const adminSlice = createSlice({
         state.isLoading = false;
         state.isError = true;
         state.message = action.payload;
+      })
+      // City management additional reducers
+      .addCase(addCity.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(addCity.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.cities.push(action.payload.data);
+        state.message = 'City added successfully';
+      })
+      .addCase(addCity.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      .addCase(updateCity.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(updateCity.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.cities = state.cities.map(city => 
+          city._id === action.payload.data._id ? action.payload.data : city
+        );
+        state.cityToEdit = null;
+        state.message = 'City updated successfully';
+      })
+      .addCase(updateCity.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      .addCase(deleteCity.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(deleteCity.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.cities = state.cities.filter(city => city._id !== action.payload.id);
+        state.message = 'City deleted successfully';
+      })
+      .addCase(deleteCity.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
       });
   }
 });
 
-export const { reset } = adminSlice.actions;
+export const { reset, setCityToEdit, setRouteToEdit } = adminSlice.actions;
 export default adminSlice.reducer;

@@ -27,8 +27,8 @@ const FixedRouteManagement = () => {
   // Import API URL from config
   const { API_URL } = require('../../config/apiConfig');
   
-  // Mock token for development (replace with actual auth token in production)
-  const mockToken = localStorage.getItem('adminToken') || 'mock-admin-token';
+  // Get admin token from Redux state or localStorage
+  const adminToken = localStorage.getItem('adminToken');
   
   // Mock data for development when API fails
   const mockCities = [
@@ -54,12 +54,18 @@ const FixedRouteManagement = () => {
         // Fetch fixed routes
         let routesData = [];
         try {
-          const routesResponse = await axios.get(`${API_URL}/fixed-routes`);
+          const config = {
+            headers: {
+              Authorization: `Bearer ${adminToken}`
+            }
+          };
+          
+          const routesResponse = await axios.get(`${API_URL}/fixed-routes`, config);
           if (routesResponse.data.success) {
             routesData = routesResponse.data.data;
           } else {
             // Fallback to service function if direct API fails
-            routesData = await getAllFixedRoutes();
+            routesData = await getAllFixedRoutes(adminToken);
           }
           setFixedRoutes(routesData);
         } catch (routeError) {
@@ -157,58 +163,49 @@ const FixedRouteManagement = () => {
           const response = await updateFixedRoute(
             currentRoute._id,
             formattedData,
-            localStorage.getItem('adminToken')
+            adminToken
           );
           
           if (response.success) {
-            toast.success('Fixed route updated successfully');
             // Update the fixed routes list
             setFixedRoutes(prev => prev.map(route => 
               route._id === currentRoute._id ? response.data : route
             ));
+            toast.success('Fixed route updated successfully');
+          } else {
+            throw new Error(response.message || 'Failed to update route');
           }
         } catch (apiError) {
-          // Fallback to client-side mock update
-          console.warn('API not available, using client-side mock update');
-          const updatedRoute = {
-            ...currentRoute,
-            ...formattedData,
-            fromCity: cities.find(city => city._id === formattedData.fromCityId),
-            toCity: cities.find(city => city._id === formattedData.toCityId),
-            cabType: cabTypes.find(cab => cab._id === formattedData.cabTypeId)
-          };
-          
-          setFixedRoutes(prev => prev.map(route => 
-            route._id === currentRoute._id ? updatedRoute : route
-          ));
-          
-          toast.success('Fixed route updated (local mode)');
+          console.error('Error updating route:', apiError);
+          toast.error(apiError.message || 'Failed to update fixed route');
         }
       } else {
         // Create new route
         try {
-          const response = await createFixedRoute(formattedData, localStorage.getItem('adminToken'));
-          
-          if (response.success) {
-            toast.success('Fixed route created successfully');
-            // Add the new route to the list
-            setFixedRoutes(prev => [...prev, response.data]);
-          }
-        } catch (apiError) {
-          // Fallback to client-side mock creation
-          console.warn('API not available, using client-side mock creation');
-          const newRoute = {
-            _id: 'mock-' + Date.now(),
-            ...formattedData,
-            fromCity: cities.find(city => city._id === formattedData.fromCityId),
-            toCity: cities.find(city => city._id === formattedData.toCityId),
-            cabType: cabTypes.find(cab => cab._id === formattedData.cabTypeId),
-            active: true,
-            createdAt: new Date().toISOString()
+          const routeData = {
+            fromCity: formData.fromCityId,
+            toCity: formData.toCityId,
+            cabType: formData.cabTypeId,
+            price: parseFloat(formData.price),
+            distance: parseFloat(formData.distance),
+            estimatedTime: parseFloat(formData.estimatedTime)
           };
           
-          setFixedRoutes(prev => [...prev, newRoute]);
-          toast.success('Fixed route created (local mode)');
+          const response = await createFixedRoute(routeData, adminToken);
+          
+          if (response.success) {
+            const newRoute = response.data;
+            
+            // Add the new route to local state
+            setFixedRoutes(prevRoutes => [...prevRoutes, newRoute]);
+            
+            toast.success('Fixed route created successfully');
+          } else {
+            throw new Error(response.message || 'Failed to create route');
+          }
+        } catch (apiError) {
+          console.error('Error creating route:', apiError);
+          toast.error(apiError.message || 'Failed to create fixed route');
         }
       }
       
@@ -221,6 +218,7 @@ const FixedRouteManagement = () => {
         estimatedTime: '',
         distance: ''
       });
+      
       setShowForm(false);
       setIsEditing(false);
       setCurrentRoute(null);
@@ -249,42 +247,49 @@ const FixedRouteManagement = () => {
 
   // Handle route deletion
   const deleteRoute = async (id) => {
-    if (window.confirm('Are you sure you want to delete this fixed route?')) {
-      try {
-        // Create a mock token for authentication
-        const mockToken = 'demo-access-token';
+    if (!id) {
+      toast.error('Invalid route ID');
+      return;
+    }
+    
+    if (!window.confirm('Are you sure you want to delete this fixed route?')) {
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const response = await deleteFixedRoute(id, adminToken);
+      
+      if (response.success) {
+        // Remove the route from local state
+        setFixedRoutes(prevRoutes => prevRoutes.filter(route => route._id !== id));
         
-        try {
-          const response = await deleteFixedRoute(id, mockToken);
-          
-          if (response.success) {
-            toast.success('Fixed route deleted successfully');
-            // Remove the deleted route from the list
-            setFixedRoutes(prev => prev.filter(route => route._id !== id));
-          }
-        } catch (apiError) {
-          // Fallback to client-side mock deletion
-          console.warn('API not available, using client-side mock deletion');
-          // Just remove from local state
-          setFixedRoutes(prev => prev.filter(route => route._id !== id));
-          toast.success('Fixed route deleted (local mode)');
-        }
-      } catch (error) {
-        console.error('Error deleting route:', error);
-        toast.error(error.message || 'Failed to delete fixed route');
+        toast.success('Fixed route deleted successfully');
+      } else {
+        throw new Error(response.message || 'Failed to delete route');
       }
+    } catch (error) {
+      console.error('Error deleting fixed route:', error);
+      toast.error(error.message || 'Failed to delete fixed route');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Find city or cab type name by ID
   const getCityName = (id) => {
-    const city = cities.find(city => city._id === id);
-    return city ? city.name : 'Unknown';
+    // Handle case where id might be an object with _id property (MongoDB document reference)
+    const cityId = typeof id === 'object' && id?._id ? id._id : id;
+    const city = cities.find(city => city._id === cityId);
+    return city ? city.name : 'Unknown City';
   };
-
+  
   const getCabTypeName = (id) => {
-    const cabType = cabTypes.find(cab => cab._id === id);
-    return cabType ? cabType.name : 'Unknown';
+    // Handle case where id might be an object with _id property (MongoDB document reference)
+    const cabId = typeof id === 'object' && id?._id ? id._id : id;
+    const cabType = cabTypes.find(cab => cab._id === cabId);
+    return cabType ? cabType.name : 'Unknown Cab';
   };
 
   return (
@@ -504,9 +509,9 @@ const FixedRouteManagement = () => {
               ) : (
                 fixedRoutes.map(route => (
                   <tr key={route._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">{route.fromCity?.name || getCityName(route.fromCity)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{route.toCity?.name || getCityName(route.toCity)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{route.cabType?.name || getCabTypeName(route.cabType)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{typeof route.fromCity === 'object' && route.fromCity?.name ? route.fromCity.name : getCityName(route.fromCity)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{typeof route.toCity === 'object' && route.toCity?.name ? route.toCity.name : getCityName(route.toCity)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{typeof route.cabType === 'object' && route.cabType?.name ? route.cabType.name : getCabTypeName(route.cabType)}</td>
                     <td className="px-6 py-4 whitespace-nowrap font-medium">{route.price}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{route.distance}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{route.estimatedTime}</td>

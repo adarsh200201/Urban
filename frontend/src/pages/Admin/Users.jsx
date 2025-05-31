@@ -1,20 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { getAllUsers } from '../../features/admin/adminSlice';
+import { getAllUsers, toggleUserStatus, reset } from '../../features/admin/adminSlice';
 import { toast } from 'react-toastify';
 
 const Users = () => {
   const dispatch = useDispatch();
-  const { users, isLoading } = useSelector((state) => state.admin);
+  const { users, isLoading, isError, isSuccess, message } = useSelector((state) => state.admin);
   const [searchTerm, setSearchTerm] = useState('');
   
   useEffect(() => {
     dispatch(getAllUsers());
+    
+    return () => {
+      dispatch(reset());
+    };
   }, [dispatch]);
+  
+  useEffect(() => {
+    if (isError) {
+      toast.error(message);
+    }
+  }, [isError, message]);
 
   const handleToggleStatus = (userId, currentStatus) => {
-    // This would typically call an API to update user status
-    toast.success(`User status would be toggled from ${currentStatus} here`);
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    dispatch(toggleUserStatus({ userId, newStatus }));
   };
 
   const filteredUsers = users?.filter(user => 
@@ -86,9 +96,14 @@ const Users = () => {
                     <td className="py-3 px-4">{new Date(user.createdAt).toLocaleDateString()}</td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        user.status === 'active' ? 'bg-green-100 text-green-800' : 
+                        user.status === 'blocked' ? 'bg-red-100 text-red-800' : 
+                        user.status === 'verified' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {user.status === 'active' ? 'Active' : 'Inactive'}
+                        {user.status === 'active' ? 'Active' : 
+                         user.status === 'blocked' ? 'Blocked' : 
+                         user.status === 'verified' ? 'Verified' : 
+                         user.status || 'Inactive'}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center">

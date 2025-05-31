@@ -13,10 +13,10 @@ exports.register = async (req, res) => {
     
     const { name, email, password, phone } = req.body;
 
-    // Check if user exists
+    // Check if user exists with same email or phone
     let user;
     try {
-      user = await User.findOne({ email });
+      user = await User.findOne({ $or: [{ email }, { phone }] });
       console.log('User lookup result:', user ? 'User exists' : 'User does not exist');
     } catch (dbError) {
       console.error('Database error during user lookup:', dbError);
@@ -28,10 +28,18 @@ exports.register = async (req, res) => {
     }
     
     if (user) {
-      return res.status(400).json({
-        success: false,
-        message: 'User with this email already exists'
-      });
+      // Specify whether email or phone is duplicate
+      if (user.email === email) {
+        return res.status(400).json({
+          success: false,
+          message: 'User with this email already exists'
+        });
+      } else if (user.phone === phone) {
+        return res.status(400).json({
+          success: false,
+          message: 'User with this phone number already exists'
+        });
+      }
     }
 
     // Create new user

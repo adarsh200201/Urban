@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { FaUser, FaPhone, FaEnvelope, FaMapMarkerAlt } from 'react-icons/fa';
@@ -30,24 +31,34 @@ const CustomerDetails = () => {
   const travelDate = queryParams.get('travelDate');
   const travelTime = queryParams.get('travelTime');
   
-  // API URL - use environment variable or fallback to local development
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  // Import API URL from config for consistency
+  const { API_URL } = require('../config/apiConfig');
+  
+  // Get user from Redux state
+  const { user } = useSelector((state) => state.auth);
 
-  // Auto-fill mobile from the booking form if available
+  // Auto-fill user details from the logged-in user or from saved data
   useEffect(() => {
-    // Try to get saved user details from localStorage
-    const savedName = localStorage.getItem('userName');
-    const savedMobile = localStorage.getItem('userMobile');
-    const savedEmail = localStorage.getItem('userEmail');
-    
-    if (savedName) setFullName(savedName);
-    if (savedMobile) setMobile(savedMobile);
-    if (savedEmail) setEmail(savedEmail);
-    
-    // Try to get mobile from query params (from home page form)
-    const queryMobile = queryParams.get('mobile');
-    if (queryMobile && !savedMobile) setMobile(queryMobile);
-  }, []); // This effect only runs once on component mount
+    // First priority: Use authenticated user data from Redux
+    if (user) {
+      setFullName(user.name || '');
+      setMobile(user.phone || '');
+      setEmail(user.email || '');
+    } else {
+      // Second priority: Try to get saved user details from localStorage
+      const savedName = localStorage.getItem('userName');
+      const savedMobile = localStorage.getItem('userMobile');
+      const savedEmail = localStorage.getItem('userEmail');
+      
+      if (savedName) setFullName(savedName);
+      if (savedMobile) setMobile(savedMobile);
+      if (savedEmail) setEmail(savedEmail);
+      
+      // Third priority: Try to get mobile from query params (from home page form)
+      const queryMobile = queryParams.get('mobile');
+      if (queryMobile && !savedMobile) setMobile(queryMobile);
+    }
+  }, [user]); // This effect only runs once on component mount
   
   // Separate useEffect for cab details to avoid dependency issues
   useEffect(() => {

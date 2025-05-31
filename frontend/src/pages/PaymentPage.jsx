@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { FaCreditCard, FaQrcode, FaUniversity, FaWallet, FaTag, FaTimes } from 'react-icons/fa';
+import { PaymentSuccessAnimation, BookingConfirmedAnimation, AnimationStyles } from '../components/PaymentAnimations';
 
 const PaymentPage = () => {
   const location = useLocation();
@@ -15,6 +16,10 @@ const PaymentPage = () => {
   const [promoCode, setPromoCode] = useState('');
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoApplied, setPromoApplied] = useState(false);
+  
+  // Animation states
+  const [showPaymentSuccessAnimation, setShowPaymentSuccessAnimation] = useState(false);
+  const [showBookingConfirmedAnimation, setShowBookingConfirmedAnimation] = useState(false);
   
   // Extract query parameters
   const queryParams = new URLSearchParams(location.search);
@@ -624,8 +629,17 @@ const PaymentPage = () => {
         confirmationParams.append('time', bookingInfo.pickupTime || '');
         confirmationParams.append('distance', bookingInfo.distance || '');
         
-        // Navigate to the confirmation page with all params
-        navigate(`/booking/confirmation?${confirmationParams.toString()}`);
+        // Show the booking confirmed animation with COD payment method first
+        setShowPaymentSuccessAnimation(true);
+        // Set selected payment method to ensure the correct message is shown
+        const paymentMethodForAnimation = 'cod';
+        
+        // Wait for animation to complete before redirecting
+        setTimeout(() => {
+          setShowPaymentSuccessAnimation(false);
+          // Navigate to the confirmation page with all params
+          navigate(`/booking/confirmation?${confirmationParams.toString()}`);
+        }, 3000);
         
         return;
       }
@@ -646,189 +660,210 @@ const PaymentPage = () => {
         name: 'UrbanRide',
         description: `Booking from ${bookingInfo.fromCity} to ${bookingInfo.toCity}`,
         handler: async function(response) {
-          // Payment successful
-          console.log('Payment successful:', response);
-          toast.success('Payment successful!');
+          setProcessingPayment(false);
+          console.log('Payment success:', response);
           
-          // Update booking with payment details
-          const updatedBooking = {
-            ...bookingData,
-            paymentId: response.razorpay_payment_id,
-            orderId: response.razorpay_order_id,
-            signature: response.razorpay_signature,
-            paymentStatus: 'paid'
-          };
+          // First show the payment success animation
+          setShowPaymentSuccessAnimation(true);
           
-          // Update payment status based on booking ID type
+          // Extract the payment ID
+          const paymentId = response.razorpay_payment_id;
+
           try {
-            // Get the booking ID from the response
-            const bookingId = updatedBooking.bookingId || updatedBooking.id || updatedBooking._id || updatedBooking.dbId || '';
-            console.log('Processing payment update for booking ID:', bookingId);
-            
-            // Determine ID type (local storage, custom ID, or MongoDB ID)
-            const isLocalId = bookingId && bookingId.toString().includes('local-');
-            const isCustomId = bookingId && (bookingId.toString().startsWith('CB') || /^[A-Z0-9]+$/.test(bookingId));
-            
-            if (isLocalId) {
-              // Handle local storage booking update
-              console.log('Local booking detected, updating in localStorage:', bookingId);
+            // Update booking with payment details
+            let updatedBooking = {
+              ...bookingData,
+              paymentId: response.razorpay_payment_id,
+              orderId: response.razorpay_order_id,
+              signature: response.razorpay_signature,
+              paymentStatus: 'paid'
+            };
+          
+            // Update payment status based on booking ID type
+            try {
+              // Get the booking ID from the response
+              const bookingId = updatedBooking.bookingId || updatedBooking.id || updatedBooking._id || updatedBooking.dbId || '';
+              console.log('Processing payment update for booking ID:', bookingId);
               
-              // Get existing bookings from localStorage
-              const localBookings = localStorage.getItem('bookings') 
-                ? JSON.parse(localStorage.getItem('bookings')) 
-                : [];
+              // Determine ID type (local storage, custom ID, or MongoDB ID)
+              const isLocalId = bookingId && bookingId.toString().includes('local-');
+              const isCustomId = bookingId && (bookingId.toString().startsWith('CB') || /^[A-Z0-9]+$/.test(bookingId));
               
-              // Find and update the specific booking
-              const updatedLocalBookings = localBookings.map(booking => {
-                if (booking._id === bookingId) {
-                  return {
-                    ...booking,
+              if (isLocalId) {
+                // Handle local storage booking update
+                console.log('Local booking detected, updating in localStorage:', bookingId);
+                
+                // Get existing bookings from localStorage
+                const localBookings = localStorage.getItem('bookings') 
+                  ? JSON.parse(localStorage.getItem('bookings')) 
+                  : [];
+                
+                // Find and update the specific booking
+                const updatedLocalBookings = localBookings.map(booking => {
+                  if (booking._id === bookingId) {
+                    return {
+                      ...booking,
+                      paymentId: response.razorpay_payment_id,
+                      paymentStatus: 'completed',
+                      paymentMethod: 'online',
+                      status: 'confirmed',
+                      updatedAt: new Date().toISOString()
+                    };
+                  }
+                  return booking;
+                });
+                
+                // Save updated bookings back to localStorage
+                localStorage.setItem('bookings', JSON.stringify(updatedLocalBookings));
+                console.log('Local booking payment updated successfully');
+                toast.success('Payment recorded successfully (offline mode)');
+              } else if (bookingId) {
+                // This is a MongoDB ID, update in the database
+                console.log('Updating payment status in MongoDB:', bookingId);
+                
+                try {
+                  // Prepare payment update data
+                  const paymentData = {
                     paymentId: response.razorpay_payment_id,
                     paymentStatus: 'completed',
                     paymentMethod: 'online',
-                    status: 'confirmed',
-                    updatedAt: new Date().toISOString()
+                    // Add custom ID for better server-side handling
+                    customBookingId: isCustomId ? bookingId : undefined
                   };
-                }
-                return booking;
-              });
-              
-              // Save updated bookings back to localStorage
-              localStorage.setItem('bookings', JSON.stringify(updatedLocalBookings));
-              console.log('Local booking payment updated successfully');
-              toast.success('Payment recorded successfully (offline mode)');
-            } else if (bookingId) {
-              // This is a MongoDB ID, update in the database
-              console.log('Updating payment status in MongoDB:', bookingId);
-              
-              try {
-                // Prepare payment update data
-                const paymentData = {
-                  paymentId: response.razorpay_payment_id,
-                  paymentStatus: 'completed',
-                  paymentMethod: 'online',
-                  // Add custom ID for better server-side handling
-                  customBookingId: isCustomId ? bookingId : undefined
-                };
-                console.log('Sending payment update with data:', paymentData);
-                
-                // Determine the appropriate approach based on ID type
-                let paymentUpdateResponse;
-                
-                if (isCustomId) {
-                  // For custom IDs (with CB prefix), use the dedicated endpoint
-                  console.log('Using custom booking ID endpoint (POST method)');
-                  paymentUpdateResponse = await axios.post(
-                    `${API_URL}/booking/payment-update/custom`,
-                    {
-                      // Put all data in body for the custom endpoint
-                      bookingId: bookingId,
-                      paymentId: response.razorpay_payment_id,
-                      paymentStatus: 'completed',
-                      paymentMethod: 'online'
-                    },
-                    {
-                      headers: {
-                        'Content-Type': 'application/json'
-                      }
-                    }
-                  );
-                } else {
-                  // For MongoDB IDs, use the standard endpoint
-                  console.log('Using standard MongoDB ID endpoint (PUT method):', bookingId);
-                  paymentUpdateResponse = await axios.put(
-                    `${API_URL}/booking/${bookingId}/payment-method`,
-                    paymentData,
-                    config // Include authentication headers
-                  );
-                }
-                
-                if (paymentUpdateResponse.data && paymentUpdateResponse.data.success) {
-                  console.log('Payment status updated in database:', paymentUpdateResponse.data);
-                  toast.success('Payment information saved to database');
+                  console.log('Sending payment update with data:', paymentData);
                   
-                  // Get the updated booking data from server
-                  if (paymentUpdateResponse.data.data) {
-                    const updatedBookingFromServer = paymentUpdateResponse.data.data;
-                    
-                    // Update booking data
-                    updatedBooking = { 
-                      ...updatedBooking,
-                      status: updatedBookingFromServer.status || 'confirmed',
-                      paymentStatus: updatedBookingFromServer.paymentStatus || 'completed'
-                    };
+                  // Determine the appropriate approach based on ID type
+                  let paymentUpdateResponse;
+                  
+                  if (isCustomId) {
+                    // For custom IDs (with CB prefix), use the dedicated endpoint
+                    console.log('Using custom booking ID endpoint (POST method)');
+                    paymentUpdateResponse = await axios.post(
+                      `${API_URL}/booking/payment-update/custom`,
+                      {
+                        // Put all data in body for the custom endpoint
+                        bookingId: bookingId,
+                        paymentId: response.razorpay_payment_id,
+                        paymentStatus: 'completed',
+                        paymentMethod: 'online'
+                      },
+                      {
+                        headers: {
+                          'Content-Type': 'application/json'
+                        }
+                      }
+                    );
+                  } else {
+                    // For MongoDB IDs, use the standard endpoint
+                    console.log('Using standard MongoDB ID endpoint (PUT method):', bookingId);
+                    paymentUpdateResponse = await axios.put(
+                      `${API_URL}/booking/${bookingId}/payment-method`,
+                      paymentData,
+                      config // Include authentication headers
+                    );
                   }
-                } else {
-                  console.warn('Payment update failed:', paymentUpdateResponse.data);
-                  toast.warning('Payment successful but database update failed');
+                  
+                  if (paymentUpdateResponse.data && paymentUpdateResponse.data.success) {
+                    console.log('Payment status updated in database:', paymentUpdateResponse.data);
+                    toast.success('Payment information saved to database');
+                    
+                    // Get the updated booking data from server
+                    if (paymentUpdateResponse.data.data) {
+                      const updatedBookingFromServer = paymentUpdateResponse.data.data;
+                      
+                      // Update booking data
+                      updatedBooking = { 
+                        ...updatedBooking,
+                        status: updatedBookingFromServer.status || 'confirmed',
+                        paymentStatus: updatedBookingFromServer.paymentStatus || 'completed'
+                      };
+                    }
+                  } else {
+                    console.warn('Payment update failed:', paymentUpdateResponse.data);
+                    toast.warning('Payment successful but database update failed');
+                  }
+                } catch (apiError) {
+                  console.error('API error updating payment:', apiError);
+                  toast.warning('Payment recorded but server update failed - will sync later');
                 }
-              } catch (apiError) {
-                console.error('API error updating payment:', apiError);
-                toast.warning('Payment recorded but server update failed - will sync later');
+              } else {
+                // No valid ID found
+                console.log('No valid booking ID found');
+                toast.info('Payment recorded but booking ID not found');
               }
-            } else {
-              // No valid ID found
-              console.log('No valid booking ID found');
-              toast.info('Payment recorded but booking ID not found');
+              
+              // Only navigate once - use the proper ID from the database if available
+              console.log('Redirecting to booking details...');
+              // Give the browser a moment to process the navigation
+              setTimeout(() => {
+                const confirmationId = updatedBooking.id || updatedBooking._id || 'pending';
+                navigate(`/booking/${confirmationId}?paymentStatus=success&from=${bookingInfo.fromCity}&to=${bookingInfo.toCity}&cabName=${encodeURIComponent(bookingInfo.cabName)}&amount=${bookingInfo.totalAmount}&date=${encodeURIComponent(bookingInfo.pickupDate)}&time=${encodeURIComponent(bookingInfo.pickupTime)}`);
+              }, 500);
+
+            } catch (paymentUpdateError) {
+              console.error('Error in payment update process:', paymentUpdateError);
+              toast.error('Payment was successful, but we had trouble updating your booking');
+
+              // Still redirect to booking details, even if there was an error updating the payment status
+              setTimeout(() => {
+                navigate(`/booking/${bookingData.id}?from=${bookingInfo.fromCity}&to=${bookingInfo.toCity}`);
+              }, 500);
             }
+          } catch (error) {
+            console.error('Error processing payment success:', error);
+            toast.error('There was a problem processing your payment');
             
-            // Only navigate once - use the proper ID from the database if available
-            console.log('Redirecting to booking details...');
-            // Give the browser a moment to process the navigation
+            // Still navigate somewhere even if processing failed
             setTimeout(() => {
-              const confirmationId = updatedBooking.id || updatedBooking._id || 'pending';
-              navigate(`/booking/${confirmationId}?paymentStatus=success&from=${bookingInfo.fromCity}&to=${bookingInfo.toCity}&cabName=${encodeURIComponent(bookingInfo.cabName)}&amount=${bookingInfo.totalAmount}&date=${encodeURIComponent(bookingInfo.pickupDate)}&time=${encodeURIComponent(bookingInfo.pickupTime)}`);
-            }, 500);
-          } catch (paymentUpdateError) {
-            console.error('Error in payment update process:', paymentUpdateError);
-            toast.error('Payment was successful, but we had trouble updating your booking');
-            
-            // Still redirect to booking details, even if there was an error updating the payment status
-            setTimeout(() => {
-              navigate(`/booking/${bookingData.id}?from=${bookingInfo.fromCity}&to=${bookingInfo.toCity}`);
+              navigate(`/booking/status?error=true`);
             }, 500);
           }
-        },
-        prefill: {
-          name: bookingInfo.name,
-          email: bookingInfo.email || '',
-          contact: bookingInfo.mobile
-        },
-        notes: {
-          bookingId: tempBookingId,
-          fromCity: bookingInfo.fromCity,
-          toCity: bookingInfo.toCity
-        },
-        theme: {
-          color: '#3B82F6'
-        },
-        modal: {
-          ondismiss: function() {
-            setProcessingPayment(false);
-            toast.info('Payment cancelled');
-          }
-        }
-      };
-      
-      // Fallback approach in case Razorpay integration fails
-      try {
-        // Create and open Razorpay instance
-        const razorpayInstance = new window.Razorpay(options);
-        razorpayInstance.on('payment.failed', function(response) {
-          toast.error('Payment failed: ' + (response.error?.description || 'Unknown error'));
+      },
+      prefill: {
+        name: bookingInfo.name,
+        email: bookingInfo.email || '',
+        contact: bookingInfo.mobile
+      },
+      notes: {
+        bookingId: tempBookingId,
+        fromCity: bookingInfo.fromCity,
+        toCity: bookingInfo.toCity
+      },
+      theme: {
+        color: '#3B82F6'
+      },
+      modal: {
+        ondismiss: function() {
           setProcessingPayment(false);
-        });
-        razorpayInstance.open();
-      } catch (razorpayError) {
-        console.error('Razorpay error:', razorpayError);
-        
-        // Fallback for demo purposes - simulate payment success
-        toast.success('Demo mode: Payment simulated successfully');
-        setTimeout(() => {
-          // Redirect directly to booking details with complete trip information
-          navigate(`/booking/${bookingData.id}?paymentStatus=success&from=${bookingInfo.fromCity}&to=${bookingInfo.toCity}&cabName=${encodeURIComponent(bookingInfo.cabName)}&amount=${bookingInfo.totalAmount}&date=${encodeURIComponent(bookingInfo.pickupDate)}&time=${encodeURIComponent(bookingInfo.pickupTime)}`);
-        }, 2000);
+          toast.info('Payment cancelled');
+        }
       }
+    };
+    
+    // Fallback approach in case Razorpay integration fails
+    try {
+      // Create and open Razorpay instance
+      const razorpayInstance = new window.Razorpay(options);
+      razorpayInstance.on('payment.failed', function(response) {
+        toast.error('Payment failed: ' + (response.error?.description || 'Unknown error'));
+        setProcessingPayment(false);
+      });
+      razorpayInstance.open();
+    } catch (razorpayError) {
+      console.error('Razorpay error:', razorpayError);
+      
+      // Fallback for demo purposes - simulate payment success
+      toast.success('Demo mode: Payment simulated successfully');
+      
+      // Show payment success animation even in demo mode
+      setShowPaymentSuccessAnimation(true);
+      
+      // Wait before redirecting
+      setTimeout(() => {
+        // Redirect directly to booking details with complete trip information
+        navigate(`/booking/${bookingData.id}?paymentStatus=success&from=${bookingInfo.fromCity}&to=${bookingInfo.toCity}&cabName=${encodeURIComponent(bookingInfo.cabName)}&amount=${bookingInfo.totalAmount}&date=${encodeURIComponent(bookingInfo.pickupDate)}&time=${encodeURIComponent(bookingInfo.pickupTime)}`);
+      }, 3000);
+    }
     } catch (error) {
       console.error('Payment initiation error:', error);
       toast.error(error.message || 'Failed to initiate payment');
@@ -850,6 +885,42 @@ const PaymentPage = () => {
   
   return (
     <div className="container mx-auto py-8 px-4">
+      {/* Payment Animation Components */}
+      {showPaymentSuccessAnimation && (
+        <PaymentSuccessAnimation 
+          paymentMethod={selectedPaymentMethod === 'cod' ? 'cod' : 'online'} 
+          onComplete={() => {
+            setShowPaymentSuccessAnimation(false);
+            setShowBookingConfirmedAnimation(true);
+            
+            // After showing booking confirmation, redirect to booking details
+            setTimeout(() => {
+              setShowBookingConfirmedAnimation(false);
+            }, 3000);
+          }} 
+        />
+      )}
+      
+      {showBookingConfirmedAnimation && (
+        <BookingConfirmedAnimation 
+          bookingData={{
+            id: bookingInfo._id || bookingInfo.id,
+            fromCity: bookingInfo.fromCity,
+            toCity: bookingInfo.toCity,
+            cabName: bookingInfo.cabName,
+            amount: bookingInfo.totalAmount,
+            date: bookingInfo.pickupDate,
+            time: bookingInfo.pickupTime
+          }}
+          onComplete={() => {
+            setShowBookingConfirmedAnimation(false);
+          }} 
+        />
+      )}
+      
+      {/* Animation Styles */}
+      <AnimationStyles />
+      
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Payment</h1>

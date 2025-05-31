@@ -102,7 +102,10 @@ const DriverDocumentPreview = ({ driver, onApproveDocument }) => {
   
   // Open image preview modal
   const openPreview = (imageUrl) => {
-    setPreviewImage(imageUrl);
+    // Only open preview if there's actually a URL to display
+    if (imageUrl && imageUrl.trim() !== '') {
+      setPreviewImage(imageUrl);
+    }
   };
   
   // Close image preview modal
@@ -231,8 +234,8 @@ const DriverDocumentPreview = ({ driver, onApproveDocument }) => {
                         </div>
                         
                         <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 rounded-lg p-4 cursor-pointer mb-2"
-                             onClick={() => openPreview(documentUrl)}>
-                          {documentUrl ? (
+                             onClick={() => documentUrl && documentUrl.trim() !== '' ? openPreview(documentUrl) : null}>
+                          {documentUrl && documentUrl.trim() !== '' ? (
                             <div className="relative w-full h-24 overflow-hidden rounded border border-gray-200">
                               <img 
                                 src={documentUrl} 
@@ -241,8 +244,12 @@ const DriverDocumentPreview = ({ driver, onApproveDocument }) => {
                                 onError={(e) => {
                                   e.target.onerror = null;
                                   e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
+                                  console.log(`Failed to load image: ${documentUrl}`);
                                 }}
                               />
+                              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 text-center">
+                                Click to view full image
+                              </div>
                             </div>
                           ) : (
                             <div className="flex flex-col items-center text-gray-400">
@@ -253,7 +260,13 @@ const DriverDocumentPreview = ({ driver, onApproveDocument }) => {
                         </div>
                         
                         <div className="flex justify-between items-center">
-                          <span className="text-xs text-gray-500">Click to view full image</span>
+                          {documentUrl && documentUrl.trim() !== '' ? (
+            <span className="text-xs text-gray-500 flex items-center">
+              <FaEye className="w-3 h-3 mr-1" /> View full image
+            </span>
+          ) : (
+            <span className="text-xs text-gray-500">No image available</span>
+          )}
                           <div className="flex space-x-2">
                             <button 
                               onClick={() => handleApproveDocument(item.key, false)}
@@ -283,23 +296,30 @@ const DriverDocumentPreview = ({ driver, onApproveDocument }) => {
       
       {/* Image Preview Modal */}
       {previewImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="relative max-w-4xl w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={closePreview}>
+          <div className="relative max-w-4xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
             <button 
               onClick={closePreview}
-              className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-lg"
+              className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100"
+              aria-label="Close preview"
             >
               <FaTimesCircle className="w-6 h-6 text-gray-700" />
             </button>
-            <img 
-              src={previewImage} 
-              alt="Document Preview" 
-              className="max-h-[80vh] mx-auto object-contain rounded-lg shadow-2xl"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = 'https://via.placeholder.com/800x600?text=Image+Not+Available';
-              }}
-            />
+            <div className="bg-white p-2 rounded-lg shadow-2xl">
+              <img 
+                src={previewImage} 
+                alt="Document Preview" 
+                className="max-h-[80vh] w-auto mx-auto object-contain"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  console.error(`Failed to load preview image: ${previewImage}`);
+                  e.target.src = 'https://via.placeholder.com/800x600?text=Image+Not+Available';
+                }}
+              />
+              <div className="mt-2 text-center text-sm text-gray-600">
+                Document Preview
+              </div>
+            </div>
           </div>
         </div>
       )}

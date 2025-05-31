@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { ToastContainer } from 'react-toastify';
+import { DocumentRequirementsProvider } from './context/DocumentRequirementsContext';
 import 'react-toastify/dist/ReactToastify.css';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
@@ -18,6 +19,7 @@ import OneWay from './pages/OneWay';
 import RoundTrip from './pages/RoundTrip';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 import BookingTrack from './pages/BookingTrack';
 import NotFound from './pages/NotFound';
 import CarSelection from './pages/CarSelection';
@@ -40,11 +42,13 @@ import AdminUsers from './pages/Admin/Users';
 import AdminBookings from './pages/Admin/Bookings';
 import AdminCabs from './pages/Admin/Cabs';
 import AdminCities from './pages/Admin/Cities';
+import CityManagement from './pages/Admin/CityManagement';
 import AdminVehicleLocations from './pages/Admin/VehicleLocations';
 import AdminLogin from './pages/Admin/Login';
 import AdminDriverManagement from './pages/Admin/DriverManagement';
 import AdminBookingAssignment from './pages/Admin/BookingAssignment';
 import FixedRouteManagement from './pages/Admin/FixedRouteManagement';
+import DocumentConfiguration from './pages/Admin/DocumentConfiguration';
 
 // Driver Pages
 import DriverLogin from './pages/driver/DriverLogin';
@@ -79,8 +83,10 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
-      <AppContent />
-      <ToastContainer position="top-right" autoClose={5000} />
+      <DocumentRequirementsProvider>
+        <AppContent />
+        <ToastContainer position="top-right" autoClose={5000} />
+      </DocumentRequirementsProvider>
     </Router>
   );
 }
@@ -120,6 +126,7 @@ function AppContent() {
           <Route path="/city/round-trip-cab" element={<RoundTrip />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/track-booking" element={<BookingTrack />} />
           <Route path="/cabs" element={<CarSelection />} />
           <Route path="/booking/customer-details" element={<CustomerDetails />} />
@@ -145,11 +152,13 @@ function AppContent() {
           <Route path="/admin/users" element={<AdminRoute><AdminLayout><AdminUsers /></AdminLayout></AdminRoute>} />
           <Route path="/admin/bookings" element={<AdminRoute><AdminLayout><AdminBookings /></AdminLayout></AdminRoute>} />
           <Route path="/admin/cabs" element={<AdminRoute><AdminLayout><AdminCabs /></AdminLayout></AdminRoute>} />
-          <Route path="/admin/cities" element={<AdminRoute><AdminLayout><AdminCities /></AdminLayout></AdminRoute>} />
+          <Route path="/admin/cities" element={<AdminRoute><AdminLayout><CityManagement /></AdminLayout></AdminRoute>} />
+          <Route path="/admin/city-management" element={<AdminRoute><AdminLayout><CityManagement /></AdminLayout></AdminRoute>} />
           <Route path="/admin/vehicle-locations" element={<AdminRoute><AdminLayout><AdminVehicleLocations /></AdminLayout></AdminRoute>} />
           <Route path="/admin/drivers" element={<AdminRoute><AdminLayout><AdminDriverManagement /></AdminLayout></AdminRoute>} />
           <Route path="/admin/booking-assignment" element={<AdminRoute><AdminLayout><AdminBookingAssignment /></AdminLayout></AdminRoute>} />
-          <Route path="/admin/fixed-routes" element={<AdminLayout><FixedRouteManagement /></AdminLayout>} />
+          <Route path="/admin/fixed-routes" element={<AdminRoute><AdminLayout><FixedRouteManagement /></AdminLayout></AdminRoute>} />
+          <Route path="/admin/document-settings" element={<AdminRoute><AdminLayout><DocumentConfiguration /></AdminLayout></AdminRoute>} />
           
           {/* Driver Routes */}
           <Route path="/driver/dashboard" element={<DriverRoute><DriverDashboard /></DriverRoute>} />

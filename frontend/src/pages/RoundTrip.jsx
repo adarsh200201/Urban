@@ -21,6 +21,14 @@ const RoundTrip = () => {
     const date = new Date();
     return date.toISOString().split('T')[0];
   };
+  
+  // Get current time in HH:MM format
+  const getCurrentTime = () => {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = Math.floor(now.getMinutes() / 30) * 30; // Round to nearest 30 minutes
+    return `${hours}:${minutes.toString().padStart(2, '0')}`;
+  };
 
   // Get tomorrow's date for min date attribute
   const getTomorrowDate = () => {
@@ -54,9 +62,9 @@ const RoundTrip = () => {
   const [fromCity, setFromCity] = useState('');
   const [toCity, setToCity] = useState('');
   const [departureDate, setDepartureDate] = useState(getCurrentDate());
-  const [departureTime, setDepartureTime] = useState('10:00');
+  const [departureTime, setDepartureTime] = useState(getCurrentTime());
   const [returnDate, setReturnDate] = useState(getTomorrowDate());
-  const [returnTime, setReturnTime] = useState('10:00');
+  const [returnTime, setReturnTime] = useState(getCurrentTime());
   const [distance, setDistance] = useState(1122);
   const [availableCabs, setAvailableCabs] = useState([]);
   const [selectedCabId, setSelectedCabId] = useState(null);
@@ -276,43 +284,59 @@ const RoundTrip = () => {
       [cabId]: !prev[cabId]
     }));
   };
-
-  const handleSearch = () => {
-    if (!fromCity || !toCity || !departureDate || !returnDate) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-    
-    if (fromCity === toCity) {
-      toast.error('Pickup and drop locations cannot be the same');
-      return;
-    }
-    
-    // Validate dates
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const deptDate = new Date(departureDate);
-    const retDate = new Date(returnDate);
-    
-    if (deptDate < today) {
-      toast.error('Departure date cannot be in the past');
-      return;
-    }
-    
-    if (retDate < deptDate) {
-      toast.error('Return date cannot be before departure date');
-      return;
-    }
-    
-    // Update URL with search parameters
-    navigate(`/city/round-trip-cab?from=${fromCity}&to=${toCity}&departureDate=${departureDate}&departureTime=${departureTime}&returnDate=${returnDate}&returnTime=${returnTime}`);
-    fetchRouteDetails(fromCity, toCity, departureDate, returnDate);
-  };
-
+  
+  // Handle the city swap button
   const handleCitySwap = () => {
     const temp = fromCity;
     setFromCity(toCity);
     setToCity(temp);
+  };
+  
+  // Handle search button click
+  const handleSearch = () => {
+    if (!fromCity || !toCity) {
+      toast.error('Please select both pickup and destination cities');
+      return;
+    }
+    
+    if (fromCity === toCity) {
+      toast.error('Pickup and destination cities cannot be the same');
+      return;
+    }
+    
+    if (!departureDate || !returnDate) {
+      toast.error('Please select both departure and return dates');
+      return;
+    }
+    
+    // Create Date objects for validation
+    const currentDateTime = new Date();
+    
+    const departureDateTime = new Date(departureDate);
+    const [deptHours, deptMinutes] = departureTime.split(':').map(Number);
+    departureDateTime.setHours(deptHours, deptMinutes, 0, 0);
+    
+    const returnDateTime = new Date(returnDate);
+    const [retHours, retMinutes] = returnTime.split(':').map(Number);
+    returnDateTime.setHours(retHours, retMinutes, 0, 0);
+    
+    // Validate departure time is not in the past
+    if (departureDateTime < currentDateTime) {
+      toast.error('Pickup time cannot be earlier than the current time');
+      return;
+    }
+    
+    // Check return date/time is after departure date/time
+    if (returnDateTime <= departureDateTime) {
+      toast.error('Return date and time must be after departure date and time');
+      return;
+    }
+    
+    // If we get here, validation passed
+    fetchRouteDetails(fromCity, toCity, departureDate, returnDate);
+    
+    // Update the URL with search parameters
+    navigate(`/city/round-trip-cab?from=${fromCity}&to=${toCity}&departureDate=${departureDate}&departureTime=${departureTime}&returnDate=${returnDate}&returnTime=${returnTime}`);
   };
 
   const handleBookNow = () => {

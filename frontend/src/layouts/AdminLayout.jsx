@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../features/auth/authSlice';
 import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaTaxi, FaCity, FaStar, 
-         FaMapMarkerAlt, FaBars, FaTimes, FaSignOutAlt } from 'react-icons/fa';
+         FaMapMarkerAlt, FaBars, FaTimes, FaSignOutAlt, FaFileAlt } from 'react-icons/fa';
 
 const AdminLayout = ({ children }) => {
   const location = useLocation();
@@ -25,6 +25,7 @@ const AdminLayout = ({ children }) => {
     { path: '/admin/drivers', name: 'Driver Management', icon: <FaUsers /> },
     { path: '/admin/cities', name: 'City Management', icon: <FaCity /> },
     { path: '/admin/fixed-routes', name: 'Fixed Routes', icon: <FaMapMarkerAlt /> },
+    { path: '/admin/document-settings', name: 'Document Requirements', icon: <FaFileAlt /> },
   ];
 
   return (
