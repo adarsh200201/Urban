@@ -23,8 +23,14 @@ export const calculateCabPrice = (cab, distance) => {
   // Calculate extra distance beyond included kilometers
   const extraDistance = Math.max(0, distance - includedKm);
   
-  // Calculate price: base price + (extra distance * extra fare per km)
-  let price = baseKmPrice;
+  // FIXED: Calculate price properly based on per-kilometer rate
+  // For included kilometers, use the base rate
+  // For any extra kilometers, apply the extra fare rate
+  let price = 0;
+  
+  // Apply base price to included kilometers (or total distance if less than included)
+  const coveredDistance = Math.min(distance, includedKm);
+  price = baseKmPrice * coveredDistance;
   
   // Only add extra fare if we've exceeded the included kilometers
   if (extraDistance > 0) {
@@ -36,8 +42,10 @@ export const calculateCabPrice = (cab, distance) => {
     console.log(`Price calculation for ${cab.name}:
 - Total Distance: ${distance}km
 - Included Kilometers: ${includedKm}km
+- Covered by Base Rate: ${coveredDistance}km
 - Extra Distance: ${extraDistance}km
-- Base Price: ₹${baseKmPrice}
+- Base Rate: ₹${baseKmPrice}/km
+- Base Distance Cost: ${coveredDistance} × ${baseKmPrice} = ₹${coveredDistance * baseKmPrice}
 - Extra Fare Rate: ₹${extraFarePerKm}/km
 - Extra Distance Cost: ${extraDistance} × ${extraFarePerKm} = ₹${extraDistance * extraFarePerKm}
 - Total Price: ₹${price}`);
